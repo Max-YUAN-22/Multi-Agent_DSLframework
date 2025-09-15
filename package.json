@@ -1,0 +1,38 @@
+{
+  "name": "multi-agent-dsl-framework",
+  "version": "1.0.0",
+  "description": "A high-performance Domain-Specific Language (DSL) framework for multi-agent coordination",
+  "main": "src/dsl.py",
+  "scripts": {
+    "start": "cd web-demo && python -m http.server 8000",
+    "build": "cd web-demo && echo 'Web demo is ready'",
+    "test": "cd src && python -m pytest tests/",
+    "benchmark": "cd src && python real_api_benchmark.py",
+    "reproduce": "cd src && python reproduce_results.py",
+    "verify": "cd src && python verify_academic_results.py"
+  },
+  "keywords": [
+    "multi-agent",
+    "dsl",
+    "framework",
+    "coordination",
+    "performance",
+    "real-world"
+  ],
+  "author": "Max-YUAN-22",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Max-YUAN-22/multi-agent-dsl-framework.git"
+  },
+  "homepage": "https://max-yuan-22.github.io/multi-agent-dsl-framework/",
+  "bugs": {
+    "url": "https://github.com/Max-YUAN-22/multi-agent-dsl-framework/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
