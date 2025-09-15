@@ -91,21 +91,21 @@ function updateMetrics() {
     const latency = document.getElementById('latency');
     
     // Add slight variations to simulate real-time data
-    const baseThroughput = 1.66;
-    const variation = (Math.random() - 0.5) * 0.1;
+    const baseThroughput = 10.09;
+    const variation = (Math.random() - 0.5) * 0.5;
     throughput.textContent = (baseThroughput + variation).toFixed(2);
     
-    // Memory with slight variation around 1.11 MB
-    const baseMemory = 1.11;
-    const memoryVariation = (Math.random() - 0.5) * 0.2;
+    // Memory with slight variation around 0.94 MB
+    const baseMemory = 0.94;
+    const memoryVariation = (Math.random() - 0.5) * 0.1;
     memory.textContent = (baseMemory + memoryVariation).toFixed(2);
     
     // Success rate stays at 100%
     successRate.textContent = '100';
     
-    // Latency with slight variation
-    const baseLatency = 0.86;
-    const latencyVariation = (Math.random() - 0.5) * 0.1;
+    // Latency with slight variation around 98.98 ms
+    const baseLatency = 98.98;
+    const latencyVariation = (Math.random() - 0.5) * 5;
     latency.textContent = (baseLatency + latencyVariation).toFixed(2);
 }
 
