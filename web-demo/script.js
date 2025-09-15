@@ -95,8 +95,8 @@ function updateMetrics() {
     const variation = (Math.random() - 0.5) * 0.1;
     throughput.textContent = (baseThroughput + variation).toFixed(2);
     
-    // Memory stays at 0.00 (optimal)
-    memory.textContent = '0.00';
+    // Memory measurement not available
+    memory.textContent = 'N/A';
     
     // Success rate stays at 100%
     successRate.textContent = '100';
