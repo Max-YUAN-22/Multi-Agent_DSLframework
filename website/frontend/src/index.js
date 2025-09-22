@@ -1354,7 +1354,7 @@ function Navigation() {
           <Button
             color="inherit"
             startIcon={<GitHubIcon />}
-            onClick={() => window.open('https://github.com/Max-YUAN-22/Multi-Agent_DSLframework-2025', '_blank')}
+            onClick={() => window.open('https://github.com/Max-YUAN-22/Multi-Agent_DSLframework', '_blank')}
             sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
           >
             {t('github')}
