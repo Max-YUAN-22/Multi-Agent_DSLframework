@@ -571,7 +571,7 @@ const useLanguage = () => {
 
 // 语言提供者组件
 function LanguageProvider({ children }) {
-  const [language, setLanguage] = React.useState('en');
+  const [language, setLanguage] = React.useState('zh'); // 默认设置为中文
 
   const t = (key) => translations[language][key] || key;
 
