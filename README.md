@@ -1,5 +1,11 @@
 # Multi-Agent DSL Framework for Intelligent Task Scheduling
 
+## 🌐 Live Demo
+
+**Interactive Website**: [https://max-yuan-22.github.io/Multi-Agent_DSLframework-2025/](https://max-yuan-22.github.io/Multi-Agent_DSLframework-2025/)
+
+Experience our framework through an interactive web interface with real-time performance monitoring, system architecture visualization, and comprehensive demo scenarios.
+
 ## Overview
 
 This repository presents a novel Multi-Agent Domain-Specific Language (DSL) framework that integrates three core algorithms for intelligent task scheduling and resource optimization:
@@ -7,6 +13,12 @@ This repository presents a novel Multi-Agent Domain-Specific Language (DSL) fram
 - **ATSLP** (Adaptive Task Scheduling with Load Prediction)
 - **HCMPL** (Hierarchical Cache Management with Pattern Learning) 
 - **CALK** (Collaborative Agent Learning with Knowledge Transfer)
+
+## Website
+
+- **Interactive Demo**: `website/` - Complete web interface with real-time monitoring
+- **Frontend**: React-based dashboard with performance visualization
+- **Deployment**: Ready for GitHub Pages deployment
 
 ## Paper
 
