@@ -55,3 +55,9 @@ MIT License - see `LICENSE` file for details.
 ## Contact
 
 Max Yuan - [Your Email]
+
+## Acknowledgments
+
+We would like to express our sincere gratitude to Prof. Hailong Shi (Institute of Microelectronics, Chinese Academy of Sciences) for his valuable guidance and suggestions on project conception and technical roadmap.
+
+感谢石海龙教授（中科院微电子所）在项目构思和技术路线方面提供的宝贵指导和建议。
