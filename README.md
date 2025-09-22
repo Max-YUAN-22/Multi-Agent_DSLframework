@@ -2,7 +2,7 @@
 
 ## 🌐 Live Demo
 
-**Interactive Website**: [https://max-yuan-22.github.io/Multi-Agent_DSLframework-2025/](https://max-yuan-22.github.io/Multi-Agent_DSLframework-2025/)
+**Interactive Website**: [https://max-yuan-22.github.io/Multi-Agent_DSLframework/](https://max-yuan-22.github.io/Multi-Agent_DSLframework/)
 
 Experience our framework through an interactive web interface with real-time performance monitoring, system architecture visualization, and comprehensive demo scenarios.
 
