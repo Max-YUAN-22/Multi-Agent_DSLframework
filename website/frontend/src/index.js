@@ -31,30 +31,30 @@ import { io } from 'socket.io-client';
 const translations = {
   zh: {
     title: "多智能体DSL框架",
-    subtitle: "自适应调度与协作学习的多智能体系统研究",
-    description: "基于先进算法的多智能体系统，集成自适应调度、智能缓存和协作学习技术。",
+    subtitle: "基于ATSLP、HCMPL和CALK算法的多智能体系统研究",
+    description: "本研究提出了一种集成自适应任务调度、分层缓存管理和协作学习技术的多智能体领域特定语言框架。",
     home: "首页",
     dashboard: "仪表板",
     agents: "智能体管理",
     knowledgeGraph: "知识图谱",
     multimodal: "多模态交互",
     dslDemo: "DSL演示",
-    coreFeatures: "核心技术",
-    provenPerformance: "性能验证",
+    coreFeatures: "核心算法",
+    provenPerformance: "实验验证",
     systemThroughput: "系统吞吐量",
     cacheHitRate: "缓存命中率",
-    latencyReduction: "延迟减少",
-    agentsSupported: "智能体支持",
-    vs: "相比",
+    latencyReduction: "延迟优化",
+    agentsSupported: "智能体数量",
+    vs: "对比",
     baselinePerformance: "基准性能",
     algorithmEfficiency: "算法效率",
-    algorithmImpact: "算法影响",
+    algorithmImpact: "算法效果",
     concurrentUnits: "并发处理单元",
-    throughputBoost: "吞吐量提升",
-    optimalUtilization: "最优资源利用率",
-    atslpDescription: "自适应任务调度与负载预测，提供2.17倍性能提升",
-    hcmplDescription: "分层缓存管理与模式学习，实现85%+命中率",
-    calkDescription: "协作智能体学习与知识转移，减少40-60%延迟",
+    throughputImprovement: "吞吐量提升",
+    resourceUtilization: "资源利用率",
+    atslpDescription: "自适应任务调度与负载预测算法，实验显示2.17倍性能提升",
+    hcmplDescription: "分层缓存管理与模式学习算法，实现85%以上命中率",
+    calkDescription: "协作智能体学习与知识转移算法，减少40-60%延迟",
     learnMore: "了解更多",
     viewDetails: "查看详情",
     close: "关闭",
@@ -295,8 +295,8 @@ workflow SmartCityWorkflow {
   },
   en: {
     title: "Multi-Agent DSL Framework",
-    subtitle: "Research on Multi-Agent Systems with Adaptive Scheduling & Collaborative Learning",
-    description: "Advanced multi-agent systems featuring adaptive scheduling, intelligent caching, and collaborative learning algorithms for enhanced performance.",
+    subtitle: "Research on Multi-Agent Systems Based on ATSLP, HCMPL, and CALK Algorithms",
+    description: "This research presents a multi-agent domain-specific language framework that integrates adaptive task scheduling, hierarchical cache management, and collaborative learning technologies.",
     home: "Home",
     dashboard: "Dashboard",
     agents: "Agent Management",
@@ -1354,7 +1354,7 @@ function Navigation() {
           <Button
             color="inherit"
             startIcon={<GitHubIcon />}
-            onClick={() => window.open('https://github.com/Max-YUAN-22/Multi-Agent_DSLframework-2025', '_blank')}
+            onClick={() => window.open('https://github.com/Max-YUAN-22/Multi-Agent_DSLframework', '_blank')}
             sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
           >
             {t('github')}
