@@ -1871,19 +1871,127 @@ X-RateLimit-Remaining: 999
 
         // 启动主应用
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔄 DOM加载完成，准备启动应用...');
+
+            // 设置最大加载超时时间
+            const loadTimeout = setTimeout(() => {
+                console.error('❌ 应用加载超时，启用应急模式');
+                window.loadingManager.updateProgress(100, '加载超时，启动应急模式...');
+
+                setTimeout(() => {
+                    showEmergencyMode();
+                }, 1000);
+            }, 15000); // 15秒超时
+
             // 延迟一点时间让加载动画更自然
             setTimeout(() => {
-                window.loadingManager.updateProgress(60, '正在初始化平台核心...');
+                window.loadingManager.updateProgress(60, '正在加载主应用脚本...');
 
                 // 加载主应用脚本
                 const script = document.createElement('script');
                 script.src = 'app.js';
+
                 script.onload = () => {
+                    clearTimeout(loadTimeout);
                     console.log('✅ 主应用脚本加载完成');
+                    window.loadingManager.updateProgress(80, '脚本加载完成，正在初始化...');
+
+                    // 设置平台初始化超时
+                    const initTimeout = setTimeout(() => {
+                        console.warn('⚠️ 平台初始化超时，强制完成加载');
+                        if (window.loadingManager) {
+                            window.loadingManager.complete();
+                        }
+                        showBasicInterface();
+                    }, 10000); // 10秒初始化超时
+
+                    // 监听平台初始化完成事件
+                    window.addEventListener('platformInitialized', () => {
+                        clearTimeout(initTimeout);
+                        console.log('✅ 平台初始化完成事件收到');
+                    });
                 };
+
+                script.onerror = (error) => {
+                    clearTimeout(loadTimeout);
+                    console.error('❌ 主应用脚本加载失败:', error);
+                    window.loadingManager.updateProgress(100, '脚本加载失败，启动简化模式...');
+
+                    setTimeout(() => {
+                        showEmergencyMode();
+                    }, 1000);
+                };
+
                 document.head.appendChild(script);
             }, 800);
         });
+
+        // 应急模式 - 当主应用无法正常加载时
+        function showEmergencyMode() {
+            console.log('🆘 启动应急模式');
+
+            const overlay = document.getElementById('loading-overlay');
+            const mainApp = document.getElementById('main-app');
+
+            if (overlay) {
+                overlay.innerHTML = \`
+                    <div class="loading-icon">⚠️</div>
+                    <div class="loading-text">应急模式</div>
+                    <div class="loading-subtitle">主应用加载失败，正在启动备用界面...</div>
+                    <div style="margin-top: 30px;">
+                        <a href="simple.html" style="background: white; color: #667eea; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; margin: 0 10px;">使用简化版</a>
+                        <button onclick="location.reload()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 15px 30px; border-radius: 50px; font-weight: 600; margin: 0 10px; cursor: pointer;">重新加载</button>
+                    </div>
+                \`;
+            }
+
+            // 隐藏主应用内容，避免显示错误
+            if (mainApp) {
+                mainApp.style.display = 'none';
+            }
+        }
+
+        // 显示基本界面（无JS功能版本）
+        function showBasicInterface() {
+            console.log('🔧 显示基本界面');
+
+            const overlay = document.getElementById('loading-overlay');
+            const mainApp = document.getElementById('main-app');
+
+            if (overlay) {
+                overlay.classList.add('fade-out');
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 500);
+            }
+
+            if (mainApp) {
+                mainApp.classList.add('loaded');
+                // 添加基本提示
+                const notice = document.createElement('div');
+                notice.style.cssText = \`
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #fff3cd;
+                    color: #856404;
+                    padding: 15px 25px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    z-index: 1000;
+                    font-weight: 500;
+                \`;
+                notice.innerHTML = '⚠️ 平台运行在基础模式，部分功能可能受限';
+                document.body.appendChild(notice);
+
+                // 5秒后隐藏提示
+                setTimeout(() => {
+                    notice.style.opacity = '0';
+                    setTimeout(() => notice.remove(), 300);
+                }, 5000);
+            }
+        }
     </script>
 </body>
 </html>

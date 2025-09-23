@@ -154,6 +154,8 @@ class MultiAgentPlatform {
                 window.loadingManager.updateProgress(90, '平台核心初始化完成...');
                 setTimeout(() => {
                     window.loadingManager.complete();
+                    // 发送初始化完成事件
+                    window.dispatchEvent(new CustomEvent('platformInitialized'));
                 }, 500);
             }
 
