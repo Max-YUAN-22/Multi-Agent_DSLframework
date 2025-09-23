@@ -124,6 +124,9 @@ class MultiAgentPlatform {
 
             // 加载数据（同步，使用演示数据）
             console.log('📊 加载初始数据...');
+            if (window.loadingManager) {
+                window.loadingManager.updateProgress(70, '正在加载数据...');
+            }
             await this.loadInitialData();
 
             // 异步初始化编辑器（不阻塞主界面）
@@ -145,7 +148,19 @@ class MultiAgentPlatform {
             // 主界面加载完成
             this.setState({ loading: false, connected: true });
             console.log('✅ 平台核心功能初始化完成');
-            this.showNotification('✅ 平台初始化完成！正在加载高级功能...', 'success');
+
+            // 更新加载进度
+            if (window.loadingManager) {
+                window.loadingManager.updateProgress(90, '平台核心初始化完成...');
+                setTimeout(() => {
+                    window.loadingManager.complete();
+                }, 500);
+            }
+
+            // 稍微延迟显示通知，避免与加载完成冲突
+            setTimeout(() => {
+                this.showNotification('✅ 平台初始化完成！欢迎使用企业级多智能体管理平台', 'success');
+            }, 1000);
 
             // 检查是否需要显示新手教程
             this.checkShowTutorial();
