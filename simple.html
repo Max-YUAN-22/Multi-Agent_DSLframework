@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级多智能体管理平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .welcome-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 60px 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .welcome-section h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .welcome-section p {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .stats-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .tutorial-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .tutorial-section h2 {
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .tutorial-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .tutorial-step {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            position: relative;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: absolute;
+            top: -15px;
+            left: 20px;
+        }
+
+        .tutorial-step h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 20px;
+            top: 15px;
+        }
+
+        .close:hover {
+            color: #667eea;
+        }
+
+        .feature-demo {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online { background: #28a745; }
+        .status-busy { background: #ffc107; }
+        .status-offline { background: #dc3545; }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .welcome-section h1 {
+                font-size: 2em;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🤖 企业级多智能体管理平台</div>
+            <nav class="nav">
+                <a href="#home" class="nav-link active">首页</a>
+                <a href="#features" class="nav-link">功能特性</a>
+                <a href="#tutorial" class="nav-link">新手教程</a>
+                <a href="#stats" class="nav-link">系统状态</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="welcome-section" id="home">
+            <h1>欢迎使用企业级多智能体管理平台</h1>
+            <p>
+                这是一个专为企业级应用设计的多智能体分布式系统管理平台。
+                集成了先进的共识算法、负载均衡策略和智能优化技术，
+                为您提供高效、安全、可扩展的企业级解决方案。
+            </p>
+            <a href="#tutorial" class="btn" onclick="startTutorial()">开始新手教程</a>
+            <a href="../index-functional.html" class="btn">进入完整平台</a>
+        </section>
+
+        <section class="stats-section" id="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number" id="active-agents">24</span>
+                    <div class="stat-label">活跃智能体</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="total-tasks">1,847</span>
+                    <div class="stat-label">已完成任务</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="system-uptime">99.9%</span>
+                    <div class="stat-label">系统可用性</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="response-time">12ms</span>
+                    <div class="stat-label">平均响应时间</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="feature-grid" id="features">
+            <div class="feature-card" onclick="showFeatureDemo('consensus')">
+                <span class="feature-icon">🛡️</span>
+                <h3>拜占庭容错共识</h3>
+                <p>采用PBFT算法确保系统在恶意节点存在的情况下仍能保持一致性和安全性。支持最多 f=(n-1)/3 个故障节点。</p>
+                <button class="btn">了解详情</button>
+            </div>
+
+            <div class="feature-card" onclick="showFeatureDemo('loadbalance')">
+                <span class="feature-icon">⚖️</span>
+                <h3>智能负载均衡</h3>
+                <p>基于LSTM神经网络的负载预测算法，动态调整任务分配策略，实现最优的资源利用率。</p>
+                <button class="btn">查看演示</button>
+            </div>
+
+            <div class="feature-card" onclick="showFeatureDemo('genetic')">
+                <span class="feature-icon">🧬</span>
+                <h3>遗传算法优化</h3>
+                <p>采用改进的遗传算法进行任务调度优化，结合精英保留策略提升全局搜索能力。</p>
+                <button class="btn">体验优化</button>
+            </div>
+
+            <div class="feature-card" onclick="showFeatureDemo('monitoring')">
+                <span class="feature-icon">📊</span>
+                <h3>实时性能监控</h3>
+                <p>多维度性能指标采集与分析，支持实时监控、历史趋势分析和智能异常检测。</p>
+                <button class="btn">查看监控</button>
+            </div>
+
+            <div class="feature-card" onclick="showFeatureDemo('security')">
+                <span class="feature-icon">🔒</span>
+                <h3>企业级安全</h3>
+                <p>多层安全防护机制，包括身份认证、访问控制、数据加密和审计日志。</p>
+                <button class="btn">安全中心</button>
+            </div>
+
+            <div class="feature-card" onclick="showFeatureDemo('dsl')">
+                <span class="feature-icon">⚙️</span>
+                <h3>DSL框架引擎</h3>
+                <p>领域特定语言框架，支持自定义业务逻辑和智能体行为的快速开发与部署。</p>
+                <button class="btn">开发工具</button>
+            </div>
+        </section>
+
+        <section class="tutorial-section" id="tutorial">
+            <h2>🎓 新手入门教程</h2>
+            <div class="tutorial-steps">
+                <div class="tutorial-step">
+                    <div class="step-number">1</div>
+                    <h4>平台概览</h4>
+                    <p>了解平台的核心功能和架构设计，熟悉用户界面和导航结构。</p>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">2</div>
+                    <h4>创建智能体</h4>
+                    <p>学习如何创建和配置智能体，设置基本属性和行为规则。</p>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">3</div>
+                    <h4>任务管理</h4>
+                    <p>掌握任务创建、分配和监控的完整流程，理解任务生命周期。</p>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">4</div>
+                    <h4>性能监控</h4>
+                    <p>学习使用监控面板，理解各项性能指标的含义和优化方法。</p>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">5</div>
+                    <h4>高级配置</h4>
+                    <p>探索高级功能，包括算法参数调优和自定义策略配置。</p>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">6</div>
+                    <h4>故障处理</h4>
+                    <p>了解常见问题的诊断和解决方法，掌握系统维护技巧。</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn" onclick="startInteractiveTutorial()">开始交互式教程</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 功能演示模态框 -->
+    <div id="featureModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // 实时数据更新
+        function updateStats() {
+            const stats = {
+                agents: Math.floor(Math.random() * 10) + 20,
+                tasks: Math.floor(Math.random() * 200) + 1800,
+                uptime: (99.8 + Math.random() * 0.3).toFixed(1),
+                responseTime: Math.floor(Math.random() * 10) + 8
+            };
+
+            document.getElementById('active-agents').textContent = stats.agents;
+            document.getElementById('total-tasks').textContent = stats.tasks.toLocaleString();
+            document.getElementById('system-uptime').textContent = stats.uptime + '%';
+            document.getElementById('response-time').textContent = stats.responseTime + 'ms';
+        }
+
+        // 导航功能
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+
+                const target = this.getAttribute('href').substring(1);
+                document.getElementById(target).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // 功能演示
+        function showFeatureDemo(feature) {
+            const modal = document.getElementById('featureModal');
+            const content = document.getElementById('modalContent');
+
+            const demos = {
+                consensus: {
+                    title: '🛡️ 拜占庭容错共识演示',
+                    content: `
+                        <h3>PBFT共识算法实时演示</h3>
+                        <div class="feature-demo">
+                            <p><strong>当前网络状态：</strong></p>
+                            <p><span class="status-indicator status-online"></span>主节点：正常运行</p>
+                            <p><span class="status-indicator status-online"></span>备份节点1：正常运行</p>
+                            <p><span class="status-indicator status-online"></span>备份节点2：正常运行</p>
+                            <p><span class="status-indicator status-busy"></span>备份节点3：处理中</p>
+                            <p><strong>共识性能：</strong> 平均延迟 12ms，成功率 99.97%</p>
+                            <p><strong>容错能力：</strong> 可容忍最多 1 个拜占庭故障节点</p>
+                        </div>
+                    `
+                },
+                loadbalance: {
+                    title: '⚖️ 智能负载均衡演示',
+                    content: `
+                        <h3>LSTM负载预测与动态均衡</h3>
+                        <div class="feature-demo">
+                            <p><strong>当前负载分布：</strong></p>
+                            <p>服务器1：65% CPU，预测趋势 ↗️</p>
+                            <p>服务器2：42% CPU，预测趋势 ↘️</p>
+                            <p>服务器3：78% CPU，预测趋势 ↗️</p>
+                            <p><strong>智能调度：</strong> 新任务将优先分配给服务器2</p>
+                            <p><strong>优化效果：</strong> 响应时间减少 35%，资源利用率提升 28%</p>
+                        </div>
+                    `
+                },
+                genetic: {
+                    title: '🧬 遗传算法优化演示',
+                    content: `
+                        <h3>任务调度智能优化</h3>
+                        <div class="feature-demo">
+                            <p><strong>优化进度：</strong></p>
+                            <p>当前代数：第 45/50 代</p>
+                            <p>最优适应度：847.6 (较初始提升 34%)</p>
+                            <p>收敛状态：正在收敛</p>
+                            <p><strong>优化目标：</strong></p>
+                            <p>• 最小化任务完成时间：✓ 改善 42%</p>
+                            <p>• 最大化资源利用率：✓ 改善 28%</p>
+                            <p>• 负载均衡优化：✓ 改善 35%</p>
+                        </div>
+                    `
+                },
+                monitoring: {
+                    title: '📊 实时性能监控演示',
+                    content: `
+                        <h3>多维度性能监控面板</h3>
+                        <div class="feature-demo">
+                            <p><strong>系统性能指标：</strong></p>
+                            <p>吞吐量：2,847 TPS</p>
+                            <p>平均延迟：12.3 ms</p>
+                            <p>错误率：0.03%</p>
+                            <p>可用性：99.97%</p>
+                            <p><strong>资源使用情况：</strong></p>
+                            <p>CPU：62% | 内存：58% | 网络：125 Mbps</p>
+                            <p><strong>智能告警：</strong> 系统运行正常，无异常事件</p>
+                        </div>
+                    `
+                },
+                security: {
+                    title: '🔒 企业级安全演示',
+                    content: `
+                        <h3>多层安全防护体系</h3>
+                        <div class="feature-demo">
+                            <p><strong>安全状态：</strong></p>
+                            <p><span class="status-indicator status-online"></span>身份认证：OAuth 2.0 + JWT</p>
+                            <p><span class="status-indicator status-online"></span>访问控制：RBAC权限模型</p>
+                            <p><span class="status-indicator status-online"></span>数据加密：AES-256端到端加密</p>
+                            <p><span class="status-indicator status-online"></span>审计日志：实时记录所有操作</p>
+                            <p><strong>威胁检测：</strong> 今日拦截 23 次异常访问尝试</p>
+                            <p><strong>合规性：</strong> 符合 ISO 27001、SOC 2 标准</p>
+                        </div>
+                    `
+                },
+                dsl: {
+                    title: '⚙️ DSL框架引擎演示',
+                    content: `
+                        <h3>领域特定语言开发框架</h3>
+                        <div class="feature-demo">
+                            <p><strong>DSL特性：</strong></p>
+                            <p>• 智能体行为定义语言</p>
+                            <p>• 可视化流程编排器</p>
+                            <p>• 热更新部署机制</p>
+                            <p>• 语法验证与智能提示</p>
+                            <p><strong>示例代码：</strong></p>
+                            <code style="background: #f8f9fa; padding: 10px; display: block; margin: 10px 0; border-radius: 5px;">
+                                agent TaskScheduler {<br>
+                                &nbsp;&nbsp;on task_received(task) {<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;analyze_priority(task);<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;assign_to_optimal_node(task);<br>
+                                &nbsp;&nbsp;}<br>
+                                }
+                            </code>
+                        </div>
+                    `
+                }
+            };
+
+            const demo = demos[feature];
+            content.innerHTML = `
+                <h2>${demo.title}</h2>
+                ${demo.content}
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn" onclick="closeModal()">关闭</button>
+                    <a href="../index-functional.html" class="btn">体验完整功能</a>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('featureModal').style.display = 'none';
+        }
+
+        function startTutorial() {
+            alert('新手教程即将开始！我们将引导您了解平台的核心功能。');
+            // 这里可以添加更详细的教程逻辑
+        }
+
+        function startInteractiveTutorial() {
+            if (confirm('是否要开始交互式教程？这将带您体验平台的完整功能。')) {
+                window.location.href = '../index-functional.html?tutorial=true';
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('featureModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            setInterval(updateStats, 5000);
+
+            // 如果URL包含tutorial参数，自动显示教程
+            if (window.location.search.includes('tutorial=true')) {
+                setTimeout(startTutorial, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
