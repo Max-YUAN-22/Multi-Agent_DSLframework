@@ -127,6 +127,34 @@
             50% { transform: scale(1.1); opacity: 0.8; }
         }
 
+        /* 跳过加载按钮样式 */
+        .skip-loading {
+            margin-top: 30px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .skip-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .skip-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* 确保主内容在加载完成前不可见 */
         .main-app {
             display: none;
@@ -147,6 +175,9 @@
             <div id="loading-progress-bar" class="loading-progress-bar"></div>
         </div>
         <div id="loading-status" class="loading-status">准备启动...</div>
+        <div id="skip-loading" class="skip-loading" style="display: none;">
+            <button onclick="skipToSimple()" class="skip-btn">跳过加载，使用简化版</button>
+        </div>
     </div>
 
     <!-- 主应用内容 -->
@@ -1869,19 +1900,34 @@ X-RateLimit-Remaining: 999
             window.loadingManager.updateProgress(40, '页面资源加载完成...');
         });
 
+        // 跳过加载函数
+        function skipToSimple() {
+            console.log('🔄 用户选择跳过加载，直接使用简化版');
+            window.location.href = 'simple.html';
+        }
+
         // 启动主应用
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🔄 DOM加载完成，准备启动应用...');
 
-            // 设置最大加载超时时间 - 缩短到5秒
+            // 2秒后显示跳过按钮
+            setTimeout(() => {
+                const skipButton = document.getElementById('skip-loading');
+                if (skipButton) {
+                    skipButton.style.display = 'block';
+                    window.loadingManager.updateProgress(30, '加载时间较长，可选择跳过使用简化版');
+                }
+            }, 2000);
+
+            // 设置最大加载超时时间 - 缩短到3秒
             const loadTimeout = setTimeout(() => {
-                console.error('❌ 应用加载超时，跳转到修复页面');
-                window.loadingManager.updateProgress(100, '检测到加载问题，正在跳转到诊断页面...');
+                console.error('❌ 应用加载超时，立即跳转到修复页面');
+                window.loadingManager.updateProgress(100, '检测到加载问题，正在跳转...');
 
                 setTimeout(() => {
                     window.location.href = 'quick-fix.html';
-                }, 1500);
-            }, 5000); // 5秒超时，更快响应问题
+                }, 500);
+            }, 3000); // 3秒超时，立即响应
 
             // 延迟一点时间让加载动画更自然
             setTimeout(() => {
