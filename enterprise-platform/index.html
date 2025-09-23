@@ -69,6 +69,22 @@
                     <span>性能优化</span>
                 </a>
             </div>
+
+            <div class="nav-section">
+                <h3>企业功能</h3>
+                <a href="#knowledge-base" class="nav-item" data-section="knowledge-base">
+                    <i class="fas fa-database"></i>
+                    <span>知识库管理</span>
+                </a>
+                <a href="#collaboration" class="nav-item" data-section="collaboration">
+                    <i class="fas fa-users"></i>
+                    <span>团队协作</span>
+                </a>
+                <a href="#settings" class="nav-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>系统设置</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -265,7 +281,231 @@
             </div>
         </section>
 
-        <!-- 其他页面内容会继续添加... -->
+        <!-- 知识库管理页面 -->
+        <section id="knowledge-base" class="content-section">
+            <div class="page-header">
+                <h2>知识库管理</h2>
+                <div class="page-actions">
+                    <button class="btn primary" onclick="createKnowledgeBase()">
+                        <i class="fas fa-plus"></i>
+                        新建知识库
+                    </button>
+                    <button class="btn secondary" onclick="importKnowledge()">
+                        <i class="fas fa-upload"></i>
+                        导入知识
+                    </button>
+                </div>
+            </div>
+
+            <div class="knowledge-dashboard">
+                <div class="knowledge-stats">
+                    <div class="stat-card">
+                        <i class="fas fa-database"></i>
+                        <div class="stat-info">
+                            <span class="stat-number">1,247</span>
+                            <span class="stat-label">知识条目</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-tags"></i>
+                        <div class="stat-info">
+                            <span class="stat-number">89</span>
+                            <span class="stat-label">标签分类</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-search"></i>
+                        <div class="stat-info">
+                            <span class="stat-number">3,456</span>
+                            <span class="stat-label">查询次数</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-brain"></i>
+                        <div class="stat-info">
+                            <span class="stat-number">95.2%</span>
+                            <span class="stat-label">准确率</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="knowledge-search">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="搜索知识库..." id="knowledge-search">
+                        <button class="btn primary">搜索</button>
+                    </div>
+                    <div class="search-filters">
+                        <select>
+                            <option>全部分类</option>
+                            <option>技术文档</option>
+                            <option>业务流程</option>
+                            <option>最佳实践</option>
+                        </select>
+                        <select>
+                            <option>最近更新</option>
+                            <option>创建时间</option>
+                            <option>访问频率</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 团队协作页面 -->
+        <section id="collaboration" class="content-section">
+            <div class="page-header">
+                <h2>团队协作</h2>
+                <div class="page-actions">
+                    <button class="btn primary" onclick="inviteTeamMember()">
+                        <i class="fas fa-user-plus"></i>
+                        邀请成员
+                    </button>
+                    <button class="btn secondary" onclick="createProject()">
+                        <i class="fas fa-folder-plus"></i>
+                        新建项目
+                    </button>
+                </div>
+            </div>
+
+            <div class="collaboration-dashboard">
+                <div class="team-overview">
+                    <div class="team-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">12</span>
+                            <span class="stat-label">团队成员</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">8</span>
+                            <span class="stat-label">进行中项目</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">156</span>
+                            <span class="stat-label">完成任务</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project-grid">
+                    <div class="project-card">
+                        <div class="project-header">
+                            <h3>智能客服系统</h3>
+                            <span class="project-status active">进行中</span>
+                        </div>
+                        <div class="project-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 65%"></div>
+                            </div>
+                            <span class="progress-text">65% 完成</span>
+                        </div>
+                        <div class="project-team">
+                            <div class="team-avatars">
+                                <img src="https://ui-avatars.com/api/?name=张三&background=667eea&color=fff" alt="张三">
+                                <img src="https://ui-avatars.com/api/?name=李四&background=9c27b0&color=fff" alt="李四">
+                                <img src="https://ui-avatars.com/api/?name=王五&background=ff9800&color=fff" alt="王五">
+                            </div>
+                            <span class="team-count">+2</span>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <div class="project-header">
+                            <h3>数据分析平台</h3>
+                            <span class="project-status planning">规划中</span>
+                        </div>
+                        <div class="project-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 25%"></div>
+                            </div>
+                            <span class="progress-text">25% 完成</span>
+                        </div>
+                        <div class="project-team">
+                            <div class="team-avatars">
+                                <img src="https://ui-avatars.com/api/?name=赵六&background=4caf50&color=fff" alt="赵六">
+                                <img src="https://ui-avatars.com/api/?name=孙七&background=f44336&color=fff" alt="孙七">
+                            </div>
+                            <span class="team-count">+1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 系统设置页面 -->
+        <section id="settings" class="content-section">
+            <div class="page-header">
+                <h2>系统设置</h2>
+                <div class="page-actions">
+                    <button class="btn primary" onclick="saveSettings()">
+                        <i class="fas fa-save"></i>
+                        保存设置
+                    </button>
+                    <button class="btn secondary" onclick="resetSettings()">
+                        <i class="fas fa-undo"></i>
+                        重置默认
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-container">
+                <div class="settings-nav">
+                    <a href="#general-settings" class="settings-tab active">常规设置</a>
+                    <a href="#security-settings" class="settings-tab">安全设置</a>
+                    <a href="#notification-settings" class="settings-tab">通知设置</a>
+                    <a href="#integration-settings" class="settings-tab">集成设置</a>
+                </div>
+
+                <div class="settings-content">
+                    <div class="settings-section active" id="general-settings">
+                        <h3>常规设置</h3>
+                        <div class="setting-item">
+                            <label>系统语言</label>
+                            <select>
+                                <option>中文(简体)</option>
+                                <option>English</option>
+                                <option>日本語</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>时区设置</label>
+                            <select>
+                                <option>Asia/Shanghai (UTC+8)</option>
+                                <option>America/New_York (UTC-5)</option>
+                                <option>Europe/London (UTC+0)</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>主题风格</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="theme" value="light" checked> 浅色</label>
+                                <label><input type="radio" name="theme" value="dark"> 深色</label>
+                                <label><input type="radio" name="theme" value="auto"> 自动</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section" id="security-settings">
+                        <h3>安全设置</h3>
+                        <div class="setting-item">
+                            <label>双因素认证</label>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="2fa-toggle">
+                                <label for="2fa-toggle"></label>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label>会话超时时间</label>
+                            <select>
+                                <option>30分钟</option>
+                                <option>1小时</option>
+                                <option>4小时</option>
+                                <option>8小时</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <!-- 模态对话框 -->
