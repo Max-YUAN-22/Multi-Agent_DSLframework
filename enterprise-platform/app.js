@@ -71,10 +71,17 @@ class MultiAgentPlatform {
             healthChecker: new HealthChecker()
         };
 
-        // 工作流引擎和任务调度器
-        this.workflowEngine = new WorkflowEngine();
-        this.taskScheduler = new TaskScheduler();
-        this.executionEngine = new ExecutionEngine();
+        // 工作流引擎和任务调度器 - 使用安全初始化
+        try {
+            this.workflowEngine = new WorkflowEngine();
+            this.taskScheduler = new TaskScheduler();
+            this.executionEngine = new ExecutionEngine();
+        } catch (error) {
+            console.warn('⚠️ 部分组件初始化失败，使用基础模式:', error.message);
+            this.workflowEngine = { start: () => {}, stop: () => {} };
+            this.taskScheduler = { start: () => {}, stop: () => {}, addTask: () => {} };
+            this.executionEngine = { execute: () => Promise.resolve() };
+        }
 
         // 企业级安全系统
         this.security = {
@@ -97,6 +104,12 @@ class MultiAgentPlatform {
         try {
             this.setState({ loading: true });
             console.log('🚀 开始初始化企业级多智能体平台...');
+
+            // 设置初始化超时保护
+            const initTimeout = setTimeout(() => {
+                console.error('⚠️ 平台初始化超时，强制完成');
+                this.forceCompleteInitialization();
+            }, 12000); // 12秒超时保护
 
             // 初始化核心组件（同步，必须成功）
             console.log('📝 初始化核心组件...');
@@ -148,6 +161,9 @@ class MultiAgentPlatform {
             // 主界面加载完成
             this.setState({ loading: false, connected: true });
             console.log('✅ 平台核心功能初始化完成');
+
+            // 清除超时保护
+            clearTimeout(initTimeout);
 
             // 更新加载进度
             if (window.loadingManager) {
@@ -2492,6 +2508,37 @@ on completion {
         } catch (error) {
             console.error('初始化失败:', error);
             this.showNotification('平台初始化失败，请刷新页面重试', 'error');
+        }
+    }
+
+    // 强制完成初始化（当超时时调用）
+    forceCompleteInitialization() {
+        console.warn('🆘 强制完成平台初始化');
+
+        try {
+            // 确保基本状态设置
+            this.setState({ loading: false, connected: true });
+
+            // 强制完成加载管理器
+            if (window.loadingManager) {
+                window.loadingManager.updateProgress(100, '强制完成初始化...');
+                setTimeout(() => {
+                    window.loadingManager.complete();
+                    window.dispatchEvent(new CustomEvent('platformInitialized'));
+                }, 200);
+            }
+
+            // 显示警告通知
+            setTimeout(() => {
+                this.showNotification('⚠️ 平台已强制启动，部分功能可能受限', 'warning');
+            }, 1000);
+
+        } catch (error) {
+            console.error('强制初始化也失败了:', error);
+            // 最后的应急处理
+            setTimeout(() => {
+                window.location.href = 'simple.html';
+            }, 2000);
         }
     }
 }

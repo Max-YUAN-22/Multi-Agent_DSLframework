@@ -1873,15 +1873,15 @@ X-RateLimit-Remaining: 999
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🔄 DOM加载完成，准备启动应用...');
 
-            // 设置最大加载超时时间
+            // 设置最大加载超时时间 - 缩短到5秒
             const loadTimeout = setTimeout(() => {
-                console.error('❌ 应用加载超时，启用应急模式');
-                window.loadingManager.updateProgress(100, '加载超时，启动应急模式...');
+                console.error('❌ 应用加载超时，跳转到修复页面');
+                window.loadingManager.updateProgress(100, '检测到加载问题，正在跳转到诊断页面...');
 
                 setTimeout(() => {
-                    showEmergencyMode();
-                }, 1000);
-            }, 15000); // 15秒超时
+                    window.location.href = 'quick-fix.html';
+                }, 1500);
+            }, 5000); // 5秒超时，更快响应问题
 
             // 延迟一点时间让加载动画更自然
             setTimeout(() => {
@@ -1915,10 +1915,10 @@ X-RateLimit-Remaining: 999
                 script.onerror = (error) => {
                     clearTimeout(loadTimeout);
                     console.error('❌ 主应用脚本加载失败:', error);
-                    window.loadingManager.updateProgress(100, '脚本加载失败，启动简化模式...');
+                    window.loadingManager.updateProgress(100, '脚本加载失败，跳转修复页面...');
 
                     setTimeout(() => {
-                        showEmergencyMode();
+                        window.location.href = 'quick-fix.html';
                     }, 1000);
                 };
 
