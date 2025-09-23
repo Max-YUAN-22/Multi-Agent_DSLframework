@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级多智能体管理平台</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+        }
+        .icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .message {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        .options {
+            display: grid;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .option {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .option:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .primary {
+            background: white;
+            color: #667eea;
+        }
+        .primary:hover {
+            background: #f8f9fa;
+        }
+        .countdown {
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🤖</div>
+        <h1>企业级多智能体管理平台</h1>
+        <div class="message">
+            为您提供真正可用的管理功能
+        </div>
+
+        <div class="options">
+            <a href="simple.html" class="option primary">
+                ⚡ 使用简化版平台 (推荐)
+            </a>
+            <button onclick="tryMainPlatform()" class="option">
+                🚀 使用功能版平台 (完全可操作)
+            </button>
+            <a href="debug.html" class="option">
+                🛠️ 访问调试工具
+            </a>
+        </div>
+
+        <div class="countdown">
+            <span id="countdown">2</span> 秒后自动跳转到功能版平台
+        </div>
+    </div>
+
+    <script>
+        console.log('🚨 应急版本已启动');
+
+        let countdown = 2;
+        const countdownEl = document.getElementById('countdown');
+
+        function updateCountdown() {
+            countdown--;
+            countdownEl.textContent = countdown;
+
+            if (countdown <= 0) {
+                window.location.href = 'index-functional.html';
+            }
+        }
+
+        // 开始倒计时
+        const timer = setInterval(updateCountdown, 1000);
+
+        function tryMainPlatform() {
+            clearInterval(timer);
+            window.location.href = 'index-functional.html?' + Date.now();
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '1') {
+                clearInterval(timer);
+                window.location.href = 'simple.html';
+            } else if (e.key === '2') {
+                tryMainPlatform();
+            } else if (e.key === '3') {
+                clearInterval(timer);
+                window.location.href = 'debug.html';
+            }
+        });
+
+        console.log('💡 提示: 按数字键1/2/3快速选择选项');
+    </script>
+</body>
+</html>

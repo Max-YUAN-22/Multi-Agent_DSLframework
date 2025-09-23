@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级多智能体管理平台 - 功能版</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .nav-tab {
+            padding: 15px 25px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .nav-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .content-section {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f2ff;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .form-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .agent-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .agent-name {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .agent-type {
+            color: #667eea;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .agent-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-idle {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .agent-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .agent-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .agent-actions .btn {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .task-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .task-priority {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .priority-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .priority-low {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-direction: column;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .agent-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 企业级多智能体管理平台</h1>
+        <p>功能版 - 真正可操作的管理系统</p>
+    </div>
+
+    <div class="container">
+        <div class="success-message">
+            <i class="fas fa-check-circle"></i>
+            功能版平台已启动！您可以真正创建、编辑和管理智能体与任务。
+        </div>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('agents')">
+                <i class="fas fa-robot"></i> 智能体管理
+            </button>
+            <button class="nav-tab" onclick="showSection('tasks')">
+                <i class="fas fa-tasks"></i> 任务管理
+            </button>
+            <button class="nav-tab" onclick="showSection('create-agent')">
+                <i class="fas fa-plus"></i> 创建智能体
+            </button>
+            <button class="nav-tab" onclick="showSection('create-task')">
+                <i class="fas fa-plus-circle"></i> 创建任务
+            </button>
+        </nav>
+
+        <!-- 智能体管理 -->
+        <section id="agents" class="content-section active">
+            <div class="section-header">
+                <h2>智能体管理</h2>
+                <div>
+                    <button class="btn" onclick="showSection('create-agent')">
+                        <i class="fas fa-plus"></i> 创建智能体
+                    </button>
+                    <button class="btn secondary" onclick="refreshAgents()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+
+            <div id="agents-list">
+                <!-- 智能体列表将在这里动态生成 -->
+            </div>
+        </section>
+
+        <!-- 任务管理 -->
+        <section id="tasks" class="content-section">
+            <div class="section-header">
+                <h2>任务管理</h2>
+                <div>
+                    <button class="btn" onclick="showSection('create-task')">
+                        <i class="fas fa-plus"></i> 创建任务
+                    </button>
+                    <button class="btn secondary" onclick="refreshTasks()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+
+            <div id="tasks-list">
+                <!-- 任务列表将在这里动态生成 -->
+            </div>
+        </section>
+
+        <!-- 创建智能体 -->
+        <section id="create-agent" class="content-section">
+            <div class="section-header">
+                <h2>创建新智能体</h2>
+                <button class="btn secondary" onclick="showSection('agents')">
+                    <i class="fas fa-arrow-left"></i> 返回列表
+                </button>
+            </div>
+
+            <div class="form-container">
+                <form id="agent-form" onsubmit="createAgent(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>智能体名称 *</label>
+                            <input type="text" name="name" required placeholder="例如: DataProcessor-05">
+                        </div>
+                        <div class="form-group">
+                            <label>智能体类型 *</label>
+                            <select name="type" required>
+                                <option value="">选择类型...</option>
+                                <option value="数据处理器">数据处理器</option>
+                                <option value="任务调度器">任务调度器</option>
+                                <option value="知识工作者">知识工作者</option>
+                                <option value="协调器">协调器</option>
+                                <option value="API代理">API代理</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>功能描述</label>
+                        <textarea name="description" placeholder="描述智能体的主要功能和用途..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>CPU核心数</label>
+                            <select name="cpu">
+                                <option value="1">1 核心</option>
+                                <option value="2" selected>2 核心</option>
+                                <option value="4">4 核心</option>
+                                <option value="8">8 核心</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>内存分配</label>
+                            <select name="memory">
+                                <option value="512MB">512MB</option>
+                                <option value="1GB">1GB</option>
+                                <option value="2GB" selected>2GB</option>
+                                <option value="4GB">4GB</option>
+                                <option value="8GB">8GB</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>最大并发任务</label>
+                            <input type="number" name="maxTasks" value="5" min="1" max="50">
+                        </div>
+                        <div class="form-group">
+                            <label>优先级</label>
+                            <select name="priority">
+                                <option value="低">低</option>
+                                <option value="中" selected>中</option>
+                                <option value="高">高</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button type="submit" class="btn">
+                            <i class="fas fa-plus"></i> 创建智能体
+                        </button>
+                        <button type="button" class="btn secondary" onclick="clearForm('agent-form')">
+                            <i class="fas fa-undo"></i> 清空表单
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 创建任务 -->
+        <section id="create-task" class="content-section">
+            <div class="section-header">
+                <h2>创建新任务</h2>
+                <button class="btn secondary" onclick="showSection('tasks')">
+                    <i class="fas fa-arrow-left"></i> 返回列表
+                </button>
+            </div>
+
+            <div class="form-container">
+                <form id="task-form" onsubmit="createTask(event)">
+                    <div class="form-group">
+                        <label>任务名称 *</label>
+                        <input type="text" name="name" required placeholder="例如: 用户数据分析任务">
+                    </div>
+
+                    <div class="form-group">
+                        <label>任务描述</label>
+                        <textarea name="description" placeholder="详细描述任务的目标和要求..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>任务类型 *</label>
+                            <select name="type" required>
+                                <option value="">选择类型...</option>
+                                <option value="数据处理">数据处理</option>
+                                <option value="模型训练">模型训练</option>
+                                <option value="报告生成">报告生成</option>
+                                <option value="数据分析">数据分析</option>
+                                <option value="API集成">API集成</option>
+                                <option value="文档处理">文档处理</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>优先级</label>
+                            <select name="priority">
+                                <option value="低">低优先级</option>
+                                <option value="中" selected>中优先级</option>
+                                <option value="高">高优先级</option>
+                                <option value="紧急">紧急</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>分配智能体</label>
+                            <select name="assignedAgent" id="agent-select">
+                                <option value="自动分配">自动分配</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>预计执行时间</label>
+                            <select name="estimatedTime">
+                                <option value="5分钟">5分钟</option>
+                                <option value="15分钟">15分钟</option>
+                                <option value="30分钟" selected>30分钟</option>
+                                <option value="1小时">1小时</option>
+                                <option value="2小时">2小时</option>
+                                <option value="4小时">4小时</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>任务参数 (可选)</label>
+                        <textarea name="parameters" placeholder='{"inputFile": "data.csv", "outputFormat": "json"}'></textarea>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button type="submit" class="btn">
+                            <i class="fas fa-plus"></i> 创建任务
+                        </button>
+                        <button type="button" class="btn secondary" onclick="clearForm('task-form')">
+                            <i class="fas fa-undo"></i> 清空表单
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        console.log('🚀 功能版平台启动...');
+
+        // 数据存储
+        let agents = JSON.parse(localStorage.getItem('platform_agents') || '[]');
+        let tasks = JSON.parse(localStorage.getItem('platform_tasks') || '[]');
+
+        // 初始化默认数据
+        if (agents.length === 0) {
+            agents = [
+                {
+                    id: 'agent_1',
+                    name: 'DataProcessor-01',
+                    type: '数据处理器',
+                    description: '专门处理大数据清洗和特征提取任务',
+                    cpu: '2',
+                    memory: '1.2GB',
+                    maxTasks: 5,
+                    priority: '中',
+                    status: 'running',
+                    currentTasks: 3,
+                    createdAt: new Date().toLocaleDateString()
+                },
+                {
+                    id: 'agent_2',
+                    name: 'TaskScheduler-01',
+                    type: '任务调度器',
+                    description: '负责任务分发和负载均衡管理',
+                    cpu: '2',
+                    memory: '856MB',
+                    maxTasks: 10,
+                    priority: '高',
+                    status: 'running',
+                    currentTasks: 7,
+                    createdAt: new Date().toLocaleDateString()
+                }
+            ];
+            saveAgents();
+        }
+
+        if (tasks.length === 0) {
+            tasks = [
+                {
+                    id: 'task_1',
+                    name: '数据清洗任务',
+                    description: '清洗用户行为数据，提取关键特征',
+                    type: '数据处理',
+                    priority: '高',
+                    assignedAgent: 'DataProcessor-01',
+                    estimatedTime: '30分钟',
+                    status: 'running',
+                    progress: 65,
+                    createdAt: new Date().toLocaleDateString()
+                },
+                {
+                    id: 'task_2',
+                    name: '模型训练任务',
+                    description: '训练用户画像预测模型',
+                    type: '模型训练',
+                    priority: '中',
+                    assignedAgent: '自动分配',
+                    estimatedTime: '2小时',
+                    status: 'pending',
+                    progress: 0,
+                    createdAt: new Date().toLocaleDateString()
+                }
+            ];
+            saveTasks();
+        }
+
+        // 保存数据
+        function saveAgents() {
+            localStorage.setItem('platform_agents', JSON.stringify(agents));
+        }
+
+        function saveTasks() {
+            localStorage.setItem('platform_tasks', JSON.stringify(tasks));
+        }
+
+        // 标签页切换
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+
+            // 更新智能体选择列表
+            if (sectionId === 'create-task') {
+                updateAgentSelect();
+            }
+        }
+
+        // 渲染智能体列表
+        function renderAgents() {
+            const agentsList = document.getElementById('agents-list');
+
+            if (agents.length === 0) {
+                agentsList.innerHTML = '<div class="error-message">暂无智能体，请先创建一个智能体。</div>';
+                return;
+            }
+
+            agentsList.innerHTML = agents.map(agent => `
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <div>
+                            <div class="agent-name">${agent.name}</div>
+                            <div class="agent-type">${agent.type}</div>
+                        </div>
+                        <div class="agent-status ${agent.status === 'running' ? 'status-running' : 'status-idle'}">
+                            ${agent.status === 'running' ? '运行中' : '空闲'}
+                        </div>
+                    </div>
+
+                    <div class="agent-metrics">
+                        <div class="metric">
+                            <div class="metric-value">${agent.cpu}核</div>
+                            <div class="metric-label">CPU</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${agent.memory}</div>
+                            <div class="metric-label">内存</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${agent.currentTasks || 0}</div>
+                            <div class="metric-label">当前任务</div>
+                        </div>
+                    </div>
+
+                    <p style="margin: 15px 0; color: #666;">${agent.description}</p>
+                    <p style="font-size: 0.9em; color: #999;">创建时间: ${agent.createdAt}</p>
+
+                    <div class="agent-actions">
+                        <button class="btn" onclick="editAgent('${agent.id}')">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button class="btn secondary" onclick="toggleAgent('${agent.id}')">
+                            <i class="fas fa-${agent.status === 'running' ? 'pause' : 'play'}"></i>
+                            ${agent.status === 'running' ? '暂停' : '启动'}
+                        </button>
+                        <button class="btn danger" onclick="deleteAgent('${agent.id}')">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染任务列表
+        function renderTasks() {
+            const tasksList = document.getElementById('tasks-list');
+
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<div class="error-message">暂无任务，请先创建一个任务。</div>';
+                return;
+            }
+
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <h3 style="margin: 0; color: #333;">${task.name}</h3>
+                            <p style="margin: 5px 0; color: #666;">${task.type}</p>
+                        </div>
+                        <span class="task-priority priority-${task.priority === '高' ? 'high' : task.priority === '中' ? 'medium' : 'low'}">
+                            ${task.priority}优先级
+                        </span>
+                    </div>
+
+                    <p style="margin: 15px 0; color: #666;">${task.description}</p>
+
+                    <div style="margin: 15px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>进度: ${task.progress}%</span>
+                            <span>状态: ${task.status === 'running' ? '运行中' : task.status === 'completed' ? '已完成' : '等待中'}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${task.progress}%"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; font-size: 0.9em;">
+                        <div><strong>分配智能体:</strong> ${task.assignedAgent}</div>
+                        <div><strong>预计时间:</strong> ${task.estimatedTime}</div>
+                        <div><strong>创建时间:</strong> ${task.createdAt}</div>
+                        <div><strong>任务ID:</strong> ${task.id}</div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn" onclick="editTask('${task.id}')">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button class="btn secondary" onclick="toggleTask('${task.id}')">
+                            <i class="fas fa-${task.status === 'running' ? 'pause' : 'play'}"></i>
+                            ${task.status === 'running' ? '暂停' : '开始'}
+                        </button>
+                        <button class="btn danger" onclick="deleteTask('${task.id}')">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 创建智能体
+        function createAgent(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const agentData = Object.fromEntries(formData);
+
+            const newAgent = {
+                id: 'agent_' + Date.now(),
+                name: agentData.name,
+                type: agentData.type,
+                description: agentData.description || '暂无描述',
+                cpu: agentData.cpu,
+                memory: agentData.memory,
+                maxTasks: parseInt(agentData.maxTasks),
+                priority: agentData.priority,
+                status: 'idle',
+                currentTasks: 0,
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            agents.push(newAgent);
+            saveAgents();
+            showNotification(`✅ 智能体 "${newAgent.name}" 创建成功！`, 'success');
+
+            // 清空表单并跳转到列表
+            event.target.reset();
+            showSection('agents');
+            renderAgents();
+        }
+
+        // 创建任务
+        function createTask(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const taskData = Object.fromEntries(formData);
+
+            const newTask = {
+                id: 'task_' + Date.now(),
+                name: taskData.name,
+                description: taskData.description || '暂无描述',
+                type: taskData.type,
+                priority: taskData.priority,
+                assignedAgent: taskData.assignedAgent,
+                estimatedTime: taskData.estimatedTime,
+                parameters: taskData.parameters,
+                status: 'pending',
+                progress: 0,
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            tasks.push(newTask);
+            saveTasks();
+            showNotification(`✅ 任务 "${newTask.name}" 创建成功！`, 'success');
+
+            // 清空表单并跳转到列表
+            event.target.reset();
+            showSection('tasks');
+            renderTasks();
+        }
+
+        // 删除智能体
+        function deleteAgent(agentId) {
+            if (confirm('确定要删除这个智能体吗？此操作不可撤销。')) {
+                agents = agents.filter(agent => agent.id !== agentId);
+                saveAgents();
+                renderAgents();
+                showNotification('🗑️ 智能体已删除', 'warning');
+            }
+        }
+
+        // 删除任务
+        function deleteTask(taskId) {
+            if (confirm('确定要删除这个任务吗？此操作不可撤销。')) {
+                tasks = tasks.filter(task => task.id !== taskId);
+                saveTasks();
+                renderTasks();
+                showNotification('🗑️ 任务已删除', 'warning');
+            }
+        }
+
+        // 切换智能体状态
+        function toggleAgent(agentId) {
+            const agent = agents.find(a => a.id === agentId);
+            if (agent) {
+                agent.status = agent.status === 'running' ? 'idle' : 'running';
+                saveAgents();
+                renderAgents();
+                showNotification(`${agent.status === 'running' ? '▶️ 智能体已启动' : '⏸️ 智能体已暂停'}`, 'info');
+            }
+        }
+
+        // 切换任务状态
+        function toggleTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                if (task.status === 'running') {
+                    task.status = 'pending';
+                    showNotification('⏸️ 任务已暂停', 'warning');
+                } else {
+                    task.status = 'running';
+                    // 模拟进度更新
+                    if (task.progress < 100) {
+                        setTimeout(() => updateTaskProgress(taskId), 2000);
+                    }
+                    showNotification('▶️ 任务已开始', 'success');
+                }
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // 模拟任务进度更新
+        function updateTaskProgress(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.status === 'running' && task.progress < 100) {
+                task.progress += Math.floor(Math.random() * 15) + 5;
+                if (task.progress >= 100) {
+                    task.progress = 100;
+                    task.status = 'completed';
+                    showNotification(`✅ 任务 "${task.name}" 已完成！`, 'success');
+                }
+                saveTasks();
+                renderTasks();
+
+                if (task.status === 'running') {
+                    setTimeout(() => updateTaskProgress(taskId), 3000);
+                }
+            }
+        }
+
+        // 编辑功能
+        function editAgent(agentId) {
+            const agent = agents.find(a => a.id === agentId);
+            if (agent) {
+                // 填充表单
+                const form = document.getElementById('agent-form');
+                form.name.value = agent.name;
+                form.type.value = agent.type;
+                form.description.value = agent.description;
+                form.cpu.value = agent.cpu;
+                form.memory.value = agent.memory;
+                form.maxTasks.value = agent.maxTasks;
+                form.priority.value = agent.priority;
+
+                // 修改提交行为
+                form.onsubmit = function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(event.target);
+                    const updatedData = Object.fromEntries(formData);
+
+                    Object.assign(agent, updatedData);
+                    saveAgents();
+                    renderAgents();
+                    showNotification(`✅ 智能体 "${agent.name}" 已更新`, 'success');
+
+                    // 恢复原始创建行为
+                    form.onsubmit = createAgent;
+                    form.reset();
+                    showSection('agents');
+                };
+
+                showSection('create-agent');
+                showNotification('📝 正在编辑智能体，修改后点击创建按钮保存', 'info');
+            }
+        }
+
+        function editTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                // 填充表单
+                const form = document.getElementById('task-form');
+                form.name.value = task.name;
+                form.description.value = task.description;
+                form.type.value = task.type;
+                form.priority.value = task.priority;
+                form.assignedAgent.value = task.assignedAgent;
+                form.estimatedTime.value = task.estimatedTime;
+                form.parameters.value = task.parameters || '';
+
+                // 修改提交行为
+                form.onsubmit = function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(event.target);
+                    const updatedData = Object.fromEntries(formData);
+
+                    Object.assign(task, updatedData);
+                    saveTasks();
+                    renderTasks();
+                    showNotification(`✅ 任务 "${task.name}" 已更新`, 'success');
+
+                    // 恢复原始创建行为
+                    form.onsubmit = createTask;
+                    form.reset();
+                    showSection('tasks');
+                };
+
+                updateAgentSelect();
+                showSection('create-task');
+                showNotification('📝 正在编辑任务，修改后点击创建按钮保存', 'info');
+            }
+        }
+
+        // 更新智能体选择列表
+        function updateAgentSelect() {
+            const select = document.getElementById('agent-select');
+            select.innerHTML = '<option value="自动分配">自动分配</option>';
+            agents.forEach(agent => {
+                select.innerHTML += `<option value="${agent.name}">${agent.name} (${agent.type})</option>`;
+            });
+        }
+
+        // 清空表单
+        function clearForm(formId) {
+            document.getElementById(formId).reset();
+            showNotification('🔄 表单已清空', 'info');
+        }
+
+        // 刷新功能
+        function refreshAgents() {
+            renderAgents();
+            showNotification('🔄 智能体列表已刷新', 'info');
+        }
+
+        function refreshTasks() {
+            renderTasks();
+            showNotification('🔄 任务列表已刷新', 'info');
+        }
+
+        // 通知系统
+        function showNotification(message, type = 'info') {
+            let container = document.getElementById('notification-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'notification-container';
+                container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000;';
+                document.body.appendChild(container);
+            }
+
+            const notification = document.createElement('div');
+            const colors = {
+                success: '#d4edda',
+                error: '#f8d7da',
+                warning: '#fff3cd',
+                info: '#d1ecf1'
+            };
+
+            const textColors = {
+                success: '#155724',
+                error: '#721c24',
+                warning: '#856404',
+                info: '#0c5460'
+            };
+
+            notification.style.cssText = `
+                background: ${colors[type] || colors.info};
+                color: ${textColors[type] || textColors.info};
+                padding: 15px 20px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                max-width: 400px;
+                font-weight: 500;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+
+            notification.textContent = message;
+            container.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (container.contains(notification)) {
+                        container.removeChild(notification);
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAgents();
+            renderTasks();
+            updateAgentSelect();
+            showNotification('🎉 功能版平台已就绪！您可以开始创建和管理智能体与任务', 'success');
+        });
+
+        console.log('✅ 功能版平台加载完成 - 真正可用！');
+    </script>
+</body>
+</html>
