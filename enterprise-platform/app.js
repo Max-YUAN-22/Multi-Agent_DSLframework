@@ -109,7 +109,7 @@ class MultiAgentPlatform {
             const initTimeout = setTimeout(() => {
                 console.error('⚠️ 平台初始化超时，强制完成');
                 this.forceCompleteInitialization();
-            }, 12000); // 12秒超时保护
+            }, 8000); // 8秒超时保护
 
             // 初始化核心组件（同步，必须成功）
             console.log('📝 初始化核心组件...');
