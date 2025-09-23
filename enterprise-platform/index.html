@@ -94,14 +94,14 @@
         </div>
 
         <div class="countdown">
-            <span id="countdown">8</span> 秒后自动跳转到简化版平台
+            <span id="countdown">3</span> 秒后自动跳转到简化版平台
         </div>
     </div>
 
     <script>
         console.log('🚨 应急版本已启动');
 
-        let countdown = 8;
+        let countdown = 3;
         const countdownEl = document.getElementById('countdown');
 
         function updateCountdown() {
@@ -118,7 +118,7 @@
 
         function tryMainPlatform() {
             clearInterval(timer);
-            window.location.href = 'index-full.html?' + Date.now();
+            window.location.href = 'index-stable.html?' + Date.now();
         }
 
         // 键盘快捷键
