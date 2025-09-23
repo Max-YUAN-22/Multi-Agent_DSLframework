@@ -708,6 +708,153 @@
     <!-- 通知系统 -->
     <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 
+    <!-- 模态框系统 -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">标题</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- 模态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 15000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn.primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .agent-config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .agent-config-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
     <script>
         console.log('🚀 完整版平台开始快速启动...');
 
@@ -857,14 +1004,163 @@
             setupSidebar();
         });
 
+        // 模态框管理
+        function openModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
         // 智能体管理功能
         function createNewAgent() {
-            showNotification('🤖 创建新智能体功能已启动', 'success');
-            // 这里可以添加创建智能体的模态框
+            openModal('创建新智能体', `
+                <form id="create-agent-form" onsubmit="submitCreateAgent(event)">
+                    <div class="agent-config-grid">
+                        <div class="form-group">
+                            <label>智能体名称</label>
+                            <input type="text" name="name" placeholder="例如: DataProcessor-05" required>
+                        </div>
+                        <div class="form-group">
+                            <label>智能体类型</label>
+                            <select name="type" required>
+                                <option value="">选择类型...</option>
+                                <option value="data-processor">数据处理器</option>
+                                <option value="task-scheduler">任务调度器</option>
+                                <option value="knowledge-worker">知识工作者</option>
+                                <option value="coordinator">协调器</option>
+                                <option value="api-agent">API代理</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>能力配置</label>
+                        <textarea name="capabilities" placeholder="输入智能体的能力列表，例如：数据清洗、机器学习、报告生成" rows="3"></textarea>
+                    </div>
+                    <div class="agent-config-grid">
+                        <div class="form-group">
+                            <label>CPU分配</label>
+                            <select name="cpu">
+                                <option value="1">1 核心</option>
+                                <option value="2" selected>2 核心</option>
+                                <option value="4">4 核心</option>
+                                <option value="8">8 核心</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>内存分配</label>
+                            <select name="memory">
+                                <option value="1GB">1GB</option>
+                                <option value="2GB" selected>2GB</option>
+                                <option value="4GB">4GB</option>
+                                <option value="8GB">8GB</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <select name="priority">
+                            <option value="low">低</option>
+                            <option value="medium" selected>中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn secondary" onclick="closeModal()">取消</button>
+                        <button type="submit" class="btn primary">创建智能体</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        function submitCreateAgent(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const agentData = Object.fromEntries(formData);
+
+            // 模拟创建智能体
+            showNotification(\`✅ 智能体 "\${agentData.name}" 创建成功！类型: \${agentData.type}\`, 'success');
+            closeModal();
+
+            // 可以在这里添加到智能体列表中
+            console.log('新创建的智能体:', agentData);
         }
 
         function configureAgent(agentId) {
-            showNotification(`⚙️ 正在配置智能体: ${agentId}`, 'info');
+            // 模拟获取智能体当前配置
+            const currentConfig = {
+                'DataProcessor-01': { type: '数据处理器', cpu: '2', memory: '1.2GB', status: '运行中' },
+                'TaskScheduler-01': { type: '任务调度器', cpu: '2', memory: '856MB', status: '运行中' },
+                'KnowledgeWorker-01': { type: '知识工作者', cpu: '1', memory: '512MB', status: '空闲' },
+                'Coordinator-01': { type: '协调器', cpu: '4', memory: '2.1GB', status: '忙碌' }
+            };
+
+            const config = currentConfig[agentId] || {};
+
+            openModal(\`配置智能体: \${agentId}\`, \`
+                <form id="configure-agent-form" onsubmit="submitConfigureAgent(event, '\${agentId}')">
+                    <div class="agent-config-grid">
+                        <div class="form-group">
+                            <label>智能体ID</label>
+                            <input type="text" value="\${agentId}" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>当前状态</label>
+                            <input type="text" value="\${config.status || '未知'}" disabled>
+                        </div>
+                    </div>
+                    <div class="agent-config-grid">
+                        <div class="form-group">
+                            <label>CPU分配</label>
+                            <select name="cpu">
+                                <option value="1" \${config.cpu === '1' ? 'selected' : ''}>1 核心</option>
+                                <option value="2" \${config.cpu === '2' ? 'selected' : ''}>2 核心</option>
+                                <option value="4" \${config.cpu === '4' ? 'selected' : ''}>4 核心</option>
+                                <option value="8" \${config.cpu === '8' ? 'selected' : ''}>8 核心</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>内存限制</label>
+                            <select name="memory">
+                                <option value="512MB">512MB</option>
+                                <option value="1GB">1GB</option>
+                                <option value="2GB">2GB</option>
+                                <option value="4GB">4GB</option>
+                                <option value="8GB">8GB</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>最大并发任务数</label>
+                        <input type="number" name="maxTasks" value="5" min="1" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label>超时设置 (分钟)</label>
+                        <input type="number" name="timeout" value="30" min="5" max="120">
+                    </div>
+                    <div class="form-group">
+                        <label>重试次数</label>
+                        <input type="number" name="retries" value="3" min="0" max="10">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn secondary" onclick="closeModal()">取消</button>
+                        <button type="submit" class="btn primary">保存配置</button>
+                    </div>
+                </form>
+            \`);
+        }
+
+        function submitConfigureAgent(event, agentId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const configData = Object.fromEntries(formData);
+
+            showNotification(\`✅ 智能体 "\${agentId}" 配置已更新！\`, 'success');
+            closeModal();
+            console.log('智能体配置更新:', agentId, configData);
         }
 
         function monitorAgent(agentId) {
@@ -885,7 +1181,84 @@
 
         // 任务调度功能
         function createNewTask() {
-            showNotification('📋 创建新任务功能已启动', 'success');
+            openModal('创建新任务', \`
+                <form id="create-task-form" onsubmit="submitCreateTask(event)">
+                    <div class="form-group">
+                        <label>任务名称</label>
+                        <input type="text" name="taskName" placeholder="例如: 用户数据分析任务" required>
+                    </div>
+                    <div class="form-group">
+                        <label>任务描述</label>
+                        <textarea name="description" placeholder="详细描述任务的目标和要求..." rows="3"></textarea>
+                    </div>
+                    <div class="agent-config-grid">
+                        <div class="form-group">
+                            <label>任务类型</label>
+                            <select name="taskType" required>
+                                <option value="">选择类型...</option>
+                                <option value="data-processing">数据处理</option>
+                                <option value="model-training">模型训练</option>
+                                <option value="report-generation">报告生成</option>
+                                <option value="data-analysis">数据分析</option>
+                                <option value="api-integration">API集成</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>优先级</label>
+                            <select name="priority">
+                                <option value="low">低优先级</option>
+                                <option value="medium" selected>中优先级</option>
+                                <option value="high">高优先级</option>
+                                <option value="urgent">紧急</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="agent-config-grid">
+                        <div class="form-group">
+                            <label>分配智能体</label>
+                            <select name="assignedAgent">
+                                <option value="auto">自动分配</option>
+                                <option value="DataProcessor-01">DataProcessor-01</option>
+                                <option value="TaskScheduler-01">TaskScheduler-01</option>
+                                <option value="KnowledgeWorker-01">KnowledgeWorker-01</option>
+                                <option value="Coordinator-01">Coordinator-01</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>预计执行时间</label>
+                            <select name="estimatedTime">
+                                <option value="5m">5分钟</option>
+                                <option value="15m">15分钟</option>
+                                <option value="30m" selected>30分钟</option>
+                                <option value="1h">1小时</option>
+                                <option value="2h">2小时</option>
+                                <option value="4h">4小时</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>任务参数 (JSON格式)</label>
+                        <textarea name="parameters" placeholder='{"inputFile": "data.csv", "outputFormat": "json"}' rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn secondary" onclick="closeModal()">取消</button>
+                        <button type="submit" class="btn primary">创建任务</button>
+                    </div>
+                </form>
+            \`);
+        }
+
+        function submitCreateTask(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const taskData = Object.fromEntries(formData);
+
+            // 生成任务ID
+            const taskId = '#' + (Math.floor(Math.random() * 9000) + 1000);
+
+            showNotification(\`✅ 任务 "\${taskData.taskName}" 创建成功！任务ID: \${taskId}\`, 'success');
+            closeModal();
+            console.log('新创建的任务:', { id: taskId, ...taskData });
         }
 
         function importTasks() {
