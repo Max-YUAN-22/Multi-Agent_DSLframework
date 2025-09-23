@@ -134,7 +134,89 @@ class MultiAgentPlatform {
             console.error('平台初始化失败:', error);
             this.setState({ loading: false, connected: false });
             this.showNotification('平台初始化失败: ' + error.message, 'error');
+
+            // 确保即使初始化失败，教程按钮仍然可用
+            setTimeout(() => {
+                this.addTutorialButton();
+                this.addFallbackTutorialButton();
+            }, 1000);
         }
+
+        // 添加界面响应性检查
+        this.checkInterfaceResponsiveness();
+    }
+
+    checkInterfaceResponsiveness() {
+        console.log('🔍 检查界面响应性...');
+
+        // 检查关键元素是否存在且可交互
+        const checkElements = () => {
+            const criticalElements = [
+                '.sidebar',
+                '.main-content',
+                '.toolbar-right',
+                '.btn'
+            ];
+
+            let responsiveCount = 0;
+
+            criticalElements.forEach(selector => {
+                const element = document.querySelector(selector);
+                if (element && element.offsetParent !== null) {
+                    responsiveCount++;
+                    console.log(`✅ 元素 ${selector} 正常响应`);
+                } else {
+                    console.warn(`⚠️ 元素 ${selector} 可能无响应`);
+                }
+            });
+
+            const responsiveRatio = responsiveCount / criticalElements.length;
+            console.log(`界面响应率: ${(responsiveRatio * 100).toFixed(1)}%`);
+
+            if (responsiveRatio < 0.8) {
+                console.error('❌ 界面响应性不足，尝试修复...');
+                this.fixInterfaceResponsiveness();
+            } else {
+                console.log('✅ 界面响应性良好');
+            }
+        };
+
+        // 延迟检查，确保DOM完全渲染
+        setTimeout(checkElements, 1000);
+
+        // 周期性检查
+        setInterval(checkElements, 30000); // 每30秒检查一次
+    }
+
+    fixInterfaceResponsiveness() {
+        console.log('🔧 尝试修复界面响应性...');
+
+        // 移除可能导致阻塞的元素
+        const problematicElements = document.querySelectorAll('[style*="pointer-events: none"]');
+        problematicElements.forEach(el => {
+            el.style.pointerEvents = 'auto';
+            console.log('🔧 恢复元素点击事件:', el);
+        });
+
+        // 确保关键按钮可点击
+        const buttons = document.querySelectorAll('.btn, button');
+        buttons.forEach(btn => {
+            if (btn.style.pointerEvents === 'none') {
+                btn.style.pointerEvents = 'auto';
+            }
+            if (!btn.onclick && !btn.getAttribute('data-section')) {
+                // 为没有事件的按钮添加基本响应
+                btn.style.cursor = 'pointer';
+            }
+        });
+
+        // 重新初始化事件监听器
+        this.setupEventListeners();
+
+        // 强制重新添加教程按钮
+        this.addFallbackTutorialButton();
+
+        this.showNotification('界面响应性已优化', 'success');
     }
 
     // 状态管理
@@ -1116,36 +1198,199 @@ on completion {
     }
 
     addTutorialButton() {
-        const toolbar = document.querySelector('.toolbar-right');
-        if (toolbar && !document.getElementById('tutorial-btn')) {
-            const tutorialBtn = document.createElement('button');
-            tutorialBtn.id = 'tutorial-btn';
-            tutorialBtn.className = 'btn-icon';
-            tutorialBtn.title = '新手教程 - 点击开始学习平台使用方法';
-            tutorialBtn.innerHTML = '<i class="fas fa-question-circle"></i>';
-            tutorialBtn.addEventListener('click', () => {
-                console.log('教程按钮被点击');
-                this.startTutorial();
-            });
+        console.log('🎓 开始添加教程按钮...');
 
-            // 插入到通知按钮之前
-            const notificationBtn = toolbar.querySelector('.notification-btn');
-            if (notificationBtn) {
-                toolbar.insertBefore(tutorialBtn, notificationBtn);
-            } else {
-                toolbar.insertBefore(tutorialBtn, toolbar.firstChild);
+        // 增强版添加按钮逻辑，包含多种fallback策略
+        const tryAddButton = () => {
+            console.log('尝试添加教程按钮...');
+
+            // 首先检查按钮是否已存在
+            if (document.getElementById('tutorial-btn')) {
+                console.log('教程按钮已存在，跳过添加');
+                return true;
             }
 
-            // 添加一个明显的提示
-            tutorialBtn.style.cssText = `
-                background-color: var(--primary-color);
-                color: white;
-                border-radius: 50%;
-                animation: bounce 2s infinite;
-            `;
+            // 查找工具栏
+            const toolbar = document.querySelector('.toolbar-right');
+            console.log('工具栏元素:', toolbar);
 
-            console.log('教程按钮已添加到工具栏');
+            if (toolbar) {
+                const tutorialBtn = document.createElement('button');
+                tutorialBtn.id = 'tutorial-btn';
+                tutorialBtn.className = 'btn-icon tutorial-button';
+                tutorialBtn.title = '🎓 新手教程 - 点击开始学习平台使用';
+                tutorialBtn.innerHTML = '<i class="fas fa-question-circle"></i>';
+
+                // 添加明显的样式确保按钮可见
+                tutorialBtn.style.cssText = `
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 8px !important;
+                    width: 40px !important;
+                    height: 40px !important;
+                    margin: 0 8px !important;
+                    cursor: pointer !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    font-size: 16px !important;
+                    transition: all 0.3s ease !important;
+                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+                    position: relative !important;
+                    z-index: 1000 !important;
+                `;
+
+                // 添加悬停效果
+                tutorialBtn.addEventListener('mouseenter', () => {
+                    tutorialBtn.style.transform = 'scale(1.1)';
+                    tutorialBtn.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.5)';
+                });
+
+                tutorialBtn.addEventListener('mouseleave', () => {
+                    tutorialBtn.style.transform = 'scale(1)';
+                    tutorialBtn.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+                });
+
+                // 确保事件绑定正确
+                tutorialBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🎓 教程按钮被点击！');
+                    this.startTutorial();
+                };
+
+                // 多种插入策略
+                const notificationBtn = toolbar.querySelector('.notification-btn');
+                const userMenu = toolbar.querySelector('.user-menu');
+
+                try {
+                    if (notificationBtn) {
+                        toolbar.insertBefore(tutorialBtn, notificationBtn);
+                        console.log('✅ 教程按钮已插入到通知按钮之前');
+                    } else if (userMenu) {
+                        toolbar.insertBefore(tutorialBtn, userMenu);
+                        console.log('✅ 教程按钮已插入到用户菜单之前');
+                    } else {
+                        toolbar.appendChild(tutorialBtn);
+                        console.log('✅ 教程按钮已追加到工具栏末尾');
+                    }
+
+                    // 验证按钮是否真的被添加了
+                    const addedBtn = document.getElementById('tutorial-btn');
+                    if (addedBtn) {
+                        console.log('✅ 教程按钮添加成功并已验证');
+
+                        // 添加一个闪烁效果来吸引注意
+                        setTimeout(() => {
+                            tutorialBtn.style.animation = 'pulse 2s infinite';
+                            const style = document.createElement('style');
+                            style.textContent = `
+                                @keyframes pulse {
+                                    0% { box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
+                                    50% { box-shadow: 0 4px 20px rgba(102, 126, 234, 0.8); }
+                                    100% { box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
+                                }
+                            `;
+                            document.head.appendChild(style);
+                        }, 1000);
+
+                        return true;
+                    } else {
+                        console.error('❌ 教程按钮添加失败：无法验证按钮存在');
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('❌ 添加教程按钮时出错:', error);
+                    return false;
+                }
+            } else {
+                console.warn('⚠️ 未找到工具栏元素 .toolbar-right');
+                return false;
+            }
+        };
+
+        // 立即尝试添加
+        if (tryAddButton()) {
+            return;
         }
+
+        // 如果立即添加失败，使用多次重试策略
+        console.log('立即添加失败，开始重试机制...');
+        let attempts = 0;
+        const maxAttempts = 20; // 增加重试次数
+        const retryInterval = setInterval(() => {
+            attempts++;
+            console.log(`第 ${attempts} 次重试添加教程按钮...`);
+
+            if (tryAddButton()) {
+                clearInterval(retryInterval);
+                console.log('✅ 教程按钮重试添加成功！');
+            } else if (attempts >= maxAttempts) {
+                clearInterval(retryInterval);
+                console.error('❌ 教程按钮添加失败：已达到最大重试次数');
+
+                // 最后一次尝试：添加到body
+                this.addFallbackTutorialButton();
+            }
+        }, 200); // 减少重试间隔
+
+        // 额外的DOMContentLoaded监听器
+        if (document.readyState !== 'complete') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(tryAddButton, 100);
+            });
+        }
+    }
+
+    // 备用方案：添加悬浮教程按钮
+    addFallbackTutorialButton() {
+        console.log('🆘 启用备用教程按钮方案...');
+
+        if (document.getElementById('fallback-tutorial-btn')) {
+            return; // 已存在
+        }
+
+        const fallbackBtn = document.createElement('button');
+        fallbackBtn.id = 'fallback-tutorial-btn';
+        fallbackBtn.innerHTML = '🎓';
+        fallbackBtn.title = '新手教程 - 点击开始学习';
+        fallbackBtn.style.cssText = `
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            width: 60px !important;
+            height: 60px !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border: none !important;
+            font-size: 24px !important;
+            cursor: pointer !important;
+            z-index: 9999 !important;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5) !important;
+            animation: bounce 2s infinite !important;
+            transition: all 0.3s ease !important;
+        `;
+
+        // 添加弹跳动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        fallbackBtn.onclick = (e) => {
+            e.preventDefault();
+            console.log('🎓 备用教程按钮被点击！');
+            this.startTutorial();
+        };
+
+        document.body.appendChild(fallbackBtn);
+        console.log('✅ 备用教程按钮已添加');
     }
 
     startTutorial() {
