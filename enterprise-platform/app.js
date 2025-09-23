@@ -5,21 +5,301 @@ class MultiAgentPlatform {
         this.agents = new Map();
         this.tasks = new Map();
         this.workflows = new Map();
-        this.apiBaseUrl = 'https://api.multiagent-platform.com/v1'; // 模拟API地址
+        this.knowledgeBase = new Map();
+        this.models = new Map();
+        this.metrics = {
+            system: new Map(),
+            agents: new Map(),
+            tasks: new Map()
+        };
+
+        // 配置项
+        this.config = {
+            apiBaseUrl: window.location.hostname === 'localhost'
+                ? 'http://localhost:8080/api/v1'
+                : '/api/v1',
+            websocketUrl: window.location.hostname === 'localhost'
+                ? 'ws://localhost:8080/ws'
+                : `wss://${window.location.host}/ws`,
+            refreshInterval: 5000,
+            enableRealTime: true,
+            enableAutoSave: true,
+            maxConcurrentTasks: 100,
+            agentTypes: ['DataProcessor', 'TaskScheduler', 'KnowledgeWorker', 'Coordinator', 'MLModel', 'APIAgent']
+        };
+
+        // 状态管理
+        this.state = {
+            connected: false,
+            loading: false,
+            currentUser: null,
+            selectedAgent: null,
+            activeSection: 'dashboard'
+        };
+
+        // 事件系统
+        this.events = new EventTarget();
+
+        // 实时数据
+        this.realTimeData = {
+            systemMetrics: {
+                cpu: 0,
+                memory: 0,
+                disk: 0,
+                network: { in: 0, out: 0 }
+            },
+            agentStatus: new Map(),
+            taskQueue: [],
+            logs: [],
+            alerts: [],
+            performance: {
+                throughput: 0,
+                latency: 0,
+                errorRate: 0,
+                successRate: 100
+            }
+        };
+
+        // 监控和日志系统
+        this.monitoring = {
+            prometheus: null,
+            grafana: null,
+            elasticsearch: null,
+            alertManager: null,
+            logCollector: new LogCollector(),
+            metricsCollector: new MetricsCollector(),
+            healthChecker: new HealthChecker()
+        };
+
+        // 工作流引擎和任务调度器
+        this.workflowEngine = new WorkflowEngine();
+        this.taskScheduler = new TaskScheduler();
+        this.executionEngine = new ExecutionEngine();
+
+        // 企业级安全系统
+        this.security = {
+            authManager: new AuthenticationManager(),
+            authzManager: new AuthorizationManager(),
+            encryption: new EncryptionService(),
+            auditLogger: new AuditLogger(),
+            sessionManager: new SessionManager()
+        };
+
         this.websocket = null;
         this.charts = {};
         this.editor = null;
+        this.intervalHandlers = [];
 
         this.init();
     }
 
     async init() {
-        this.setupNavigation();
-        this.setupToolbar();
-        this.setupWebSocket();
-        this.initializeMonacoEditor();
-        this.loadInitialData();
-        this.startRealTimeUpdates();
+        try {
+            this.setState({ loading: true });
+
+            // 初始化核心组件
+            this.setupNavigation();
+            this.setupToolbar();
+            this.setupEventListeners();
+            this.initializeLocalStorage();
+
+            // 检查用户认证
+            await this.checkAuthentication();
+
+            // 初始化连接
+            await this.initializeConnections();
+
+            // 加载数据
+            await this.loadInitialData();
+
+            // 初始化编辑器
+            await this.initializeMonacoEditor();
+
+            // 启动实时更新
+            this.startRealTimeUpdates();
+
+            // 启动任务调度器
+            this.taskScheduler.start();
+
+            // 初始化图表
+            this.initializeCharts();
+
+            this.setState({ loading: false, connected: true });
+            this.showNotification('平台初始化完成', 'success');
+
+            // 检查是否需要显示新手教程
+            this.checkShowTutorial();
+
+        } catch (error) {
+            console.error('平台初始化失败:', error);
+            this.setState({ loading: false, connected: false });
+            this.showNotification('平台初始化失败: ' + error.message, 'error');
+        }
+    }
+
+    // 状态管理
+    setState(newState) {
+        Object.assign(this.state, newState);
+        this.events.dispatchEvent(new CustomEvent('statechange', { detail: this.state }));
+        this.updateUI();
+    }
+
+    // 本地存储初始化
+    initializeLocalStorage() {
+        const savedState = localStorage.getItem('multiagent-platform-state');
+        if (savedState) {
+            try {
+                const parsed = JSON.parse(savedState);
+                this.state = { ...this.state, ...parsed };
+            } catch (error) {
+                console.warn('恢复保存状态失败:', error);
+            }
+        }
+    }
+
+    // 保存状态到本地存储
+    saveStateToLocal() {
+        const stateToSave = {
+            selectedAgent: this.state.selectedAgent,
+            activeSection: this.state.activeSection,
+            // 只保存必要的状态信息
+        };
+        localStorage.setItem('multiagent-platform-state', JSON.stringify(stateToSave));
+    }
+
+    // 用户认证检查
+    async checkAuthentication() {
+        try {
+            const token = localStorage.getItem('auth-token');
+            if (!token) {
+                throw new Error('未找到认证令牌');
+            }
+
+            const response = await this.apiCall('/auth/verify', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.success) {
+                this.state.currentUser = response.user;
+                return true;
+            } else {
+                throw new Error(response.message || '认证失败');
+            }
+        } catch (error) {
+            // 在生产环境中，这里应该重定向到登录页面
+            console.warn('认证检查失败，使用演示模式:', error.message);
+            this.state.currentUser = {
+                id: 'demo-user',
+                name: '演示用户',
+                role: 'admin',
+                permissions: ['*']
+            };
+            return false;
+        }
+    }
+
+    // 初始化连接
+    async initializeConnections() {
+        // 测试API连接
+        try {
+            await this.apiCall('/health');
+            console.log('API连接正常');
+        } catch (error) {
+            console.warn('API连接失败，启用演示模式:', error.message);
+            this.enableDemoMode();
+        }
+
+        // 初始化WebSocket连接
+        this.initializeWebSocket();
+    }
+
+    // 启用演示模式
+    enableDemoMode() {
+        this.config.demoMode = true;
+        this.generateDemoData();
+        console.log('演示模式已启用');
+    }
+
+    // 生成演示数据
+    generateDemoData() {
+        // 生成智能体数据
+        const agentTypes = this.config.agentTypes;
+        agentTypes.forEach((type, index) => {
+            const agent = {
+                id: `${type.toLowerCase()}-${String(index + 1).padStart(2, '0')}`,
+                name: `${type}-${String(index + 1).padStart(2, '0')}`,
+                type: type,
+                status: ['running', 'idle', 'busy'][Math.floor(Math.random() * 3)],
+                cpu: Math.random() * 100,
+                memory: Math.random() * 8192,
+                tasks: Math.floor(Math.random() * 50),
+                createdAt: new Date(Date.now() - Math.random() * 86400000 * 7),
+                lastActive: new Date(Date.now() - Math.random() * 3600000),
+                capabilities: this.getAgentCapabilities(type),
+                config: this.getAgentConfig(type)
+            };
+            this.agents.set(agent.id, agent);
+        });
+
+        // 生成任务数据
+        for (let i = 1; i <= 50; i++) {
+            const task = {
+                id: `task-${String(i).padStart(4, '0')}`,
+                name: `数据处理任务 #${i}`,
+                description: `处理数据集 ${i}，执行ETL操作和分析`,
+                status: ['pending', 'running', 'completed', 'failed'][Math.floor(Math.random() * 4)],
+                progress: Math.random() * 100,
+                priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+                assignedAgent: Array.from(this.agents.keys())[Math.floor(Math.random() * this.agents.size)],
+                createdAt: new Date(Date.now() - Math.random() * 86400000 * 3),
+                estimatedDuration: Math.floor(Math.random() * 3600000),
+                actualDuration: Math.random() < 0.7 ? Math.floor(Math.random() * 3600000) : null
+            };
+            this.tasks.set(task.id, task);
+        }
+
+        // 生成系统指标
+        this.generateSystemMetrics();
+    }
+
+    // 获取智能体能力
+    getAgentCapabilities(type) {
+        const capabilities = {
+            DataProcessor: ['ETL', 'DataCleaning', 'DataValidation', 'StatisticalAnalysis'],
+            TaskScheduler: ['TaskQueue', 'LoadBalancing', 'PriorityManagement', 'ResourceAllocation'],
+            KnowledgeWorker: ['DocumentProcessing', 'KnowledgeExtraction', 'SemanticSearch', 'ReportGeneration'],
+            Coordinator: ['WorkflowOrchestration', 'AgentCommunication', 'ConflictResolution', 'DecisionMaking'],
+            MLModel: ['ModelTraining', 'Inference', 'ModelEvaluation', 'FeatureEngineering'],
+            APIAgent: ['RESTfulAPI', 'GraphQL', 'WebhookHandling', 'DataSynchronization']
+        };
+        return capabilities[type] || [];
+    }
+
+    // 获取智能体配置
+    getAgentConfig(type) {
+        const configs = {
+            DataProcessor: { maxConcurrentJobs: 5, memoryLimit: '4GB', timeout: '30m' },
+            TaskScheduler: { queueSize: 1000, schedulingStrategy: 'round-robin', healthCheckInterval: '30s' },
+            KnowledgeWorker: { vectorDimensions: 768, maxDocumentSize: '10MB', cacheTTL: '1h' },
+            Coordinator: { maxAgents: 50, decisionTimeout: '5m', retryAttempts: 3 },
+            MLModel: { gpuEnabled: true, modelFormat: 'ONNX', batchSize: 32 },
+            APIAgent: { rateLimitPerSecond: 100, timeout: '30s', retries: 3 }
+        };
+        return configs[type] || {};
+    }
+
+    // 生成系统指标
+    generateSystemMetrics() {
+        this.realTimeData.systemMetrics = {
+            cpu: 30 + Math.random() * 40,
+            memory: 40 + Math.random() * 30,
+            disk: 20 + Math.random() * 20,
+            network: {
+                in: 100 + Math.random() * 50,
+                out: 80 + Math.random() * 40
+            }
+        };
     }
 
     // 导航系统
@@ -226,6 +506,960 @@ on completion {
         this.updateStatistics();
         this.initializeCharts();
         this.loadRecentActivity();
+    }
+
+    // 初始化监控页面
+    initializeMonitoring() {
+        this.renderMonitoringInterface();
+        this.initializeMonitoringCharts();
+        this.startRealTimeMonitoring();
+    }
+
+    renderMonitoringInterface() {
+        const monitoringSection = document.getElementById('monitoring');
+        if (!monitoringSection) return;
+
+        monitoringSection.innerHTML = `
+            <div class="monitoring-container">
+                <div class="monitoring-header">
+                    <h2>系统性能监控</h2>
+                    <div class="monitoring-controls">
+                        <button class="btn btn-small secondary" onclick="platform.refreshMonitoring()">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button>
+                        <button class="btn btn-small secondary" onclick="platform.exportMonitoringData()">
+                            <i class="fas fa-download"></i> 导出
+                        </button>
+                        <button class="btn btn-small primary" onclick="platform.openMonitoringSettings()">
+                            <i class="fas fa-cog"></i> 设置
+                        </button>
+                    </div>
+                </div>
+
+                <div class="monitoring-metrics">
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <h4>系统性能</h4>
+                                <span class="metric-status healthy">正常</span>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-item">
+                                    <span class="metric-label">CPU 使用率</span>
+                                    <div class="metric-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" id="cpu-progress" style="width: 0%"></div>
+                                        </div>
+                                        <span class="metric-value" id="cpu-value">0%</span>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">内存使用率</span>
+                                    <div class="metric-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" id="memory-progress" style="width: 0%"></div>
+                                        </div>
+                                        <span class="metric-value" id="memory-value">0%</span>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">网络I/O</span>
+                                    <div class="metric-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" id="network-progress" style="width: 0%"></div>
+                                        </div>
+                                        <span class="metric-value" id="network-value">0 MB/s</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <h4>智能体状态分布</h4>
+                                <span class="metric-count" id="total-agents">24</span>
+                            </div>
+                            <div class="metric-content">
+                                <div class="agent-status-chart">
+                                    <canvas id="agent-status-chart" width="200" height="200"></canvas>
+                                </div>
+                                <div class="agent-status-legend">
+                                    <div class="legend-item">
+                                        <span class="legend-color online"></span>
+                                        <span class="legend-label">在线</span>
+                                        <span class="legend-value" id="agents-online">18</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color busy"></span>
+                                        <span class="legend-label">忙碌</span>
+                                        <span class="legend-value" id="agents-busy">4</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color offline"></span>
+                                        <span class="legend-label">离线</span>
+                                        <span class="legend-value" id="agents-offline">2</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <h4>任务执行统计</h4>
+                                <span class="metric-trend positive">+12%</span>
+                            </div>
+                            <div class="metric-content">
+                                <div class="task-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="tasks-completed">1,247</div>
+                                        <div class="stat-label">已完成</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="tasks-running">23</div>
+                                        <div class="stat-label">运行中</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="tasks-queued">89</div>
+                                        <div class="stat-label">队列中</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="tasks-failed">7</div>
+                                        <div class="stat-label">失败</div>
+                                    </div>
+                                </div>
+                                <div class="throughput-chart">
+                                    <canvas id="throughput-chart" width="300" height="120"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="monitoring-details">
+                    <div class="detail-tabs">
+                        <button class="tab-btn active" data-tab="real-time">实时活动</button>
+                        <button class="tab-btn" data-tab="performance">性能历史</button>
+                        <button class="tab-btn" data-tab="alerts">告警信息</button>
+                        <button class="tab-btn" data-tab="logs">系统日志</button>
+                    </div>
+
+                    <div class="tab-content active" id="real-time-tab">
+                        <div class="activity-stream">
+                            <div class="activity-header">
+                                <h4>实时活动监控</h4>
+                                <div class="activity-controls">
+                                    <button class="btn btn-small" onclick="platform.pauseActivityStream()">
+                                        <i class="fas fa-pause"></i> 暂停
+                                    </button>
+                                    <button class="btn btn-small" onclick="platform.clearActivityStream()">
+                                        <i class="fas fa-trash"></i> 清空
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="activity-list" id="activity-list">
+                                <!-- 实时活动将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="performance-tab">
+                        <div class="performance-charts">
+                            <div class="chart-container">
+                                <h4>系统性能趋势</h4>
+                                <canvas id="performance-trend-chart" width="800" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="alerts-tab">
+                        <div class="alerts-container">
+                            <div class="alerts-header">
+                                <h4>系统告警</h4>
+                                <div class="alert-filters">
+                                    <select id="alert-severity-filter">
+                                        <option value="all">所有级别</option>
+                                        <option value="critical">严重</option>
+                                        <option value="warning">警告</option>
+                                        <option value="info">信息</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="alerts-list" id="alerts-list">
+                                <!-- 告警信息将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="logs-tab">
+                        <div class="logs-container">
+                            <div class="logs-header">
+                                <h4>系统日志</h4>
+                                <div class="log-controls">
+                                    <select id="log-level-filter">
+                                        <option value="all">所有级别</option>
+                                        <option value="error">错误</option>
+                                        <option value="warn">警告</option>
+                                        <option value="info">信息</option>
+                                        <option value="debug">调试</option>
+                                    </select>
+                                    <input type="text" id="log-search" placeholder="搜索日志...">
+                                </div>
+                            </div>
+                            <div class="logs-list" id="logs-list">
+                                <!-- 日志信息将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 初始化标签页切换
+        this.initializeMonitoringTabs();
+    }
+
+    initializeMonitoringTabs() {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 移除所有活跃状态
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // 添加活跃状态
+                btn.classList.add('active');
+                const targetTab = btn.dataset.tab + '-tab';
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+    }
+
+    initializeMonitoringCharts() {
+        // 智能体状态分布饼图
+        this.initializeAgentStatusChart();
+
+        // 吞吐量图表
+        this.initializeThroughputChart();
+
+        // 性能趋势图表
+        this.initializePerformanceTrendChart();
+    }
+
+    initializeAgentStatusChart() {
+        const ctx = document.getElementById('agent-status-chart');
+        if (!ctx) return;
+
+        this.charts.agentStatus = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['在线', '忙碌', '离线'],
+                datasets: [{
+                    data: [18, 4, 2],
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    initializeThroughputChart() {
+        const ctx = document.getElementById('throughput-chart');
+        if (!ctx) return;
+
+        const timeLabels = this.generateTimeLabels(12);
+        const throughputData = timeLabels.map(() => Math.random() * 100 + 50);
+
+        this.charts.throughput = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: '任务吞吐量',
+                    data: throughputData,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false
+                    },
+                    y: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    initializePerformanceTrendChart() {
+        const ctx = document.getElementById('performance-trend-chart');
+        if (!ctx) return;
+
+        const timeLabels = this.generateTimeLabels(24);
+
+        this.charts.performanceTrend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: 'CPU 使用率',
+                        data: timeLabels.map(() => Math.random() * 40 + 30),
+                        borderColor: '#EF4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        fill: false
+                    },
+                    {
+                        label: '内存使用率',
+                        data: timeLabels.map(() => Math.random() * 30 + 40),
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: false
+                    },
+                    {
+                        label: '网络使用率',
+                        data: timeLabels.map(() => Math.random() * 20 + 15),
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
+    startRealTimeMonitoring() {
+        // 停止之前的监控
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
+        }
+
+        // 启动实时监控
+        this.monitoringInterval = setInterval(() => {
+            this.updateRealTimeMetrics();
+            this.updateActivityStream();
+        }, 2000);
+
+        // 立即更新一次
+        this.updateRealTimeMetrics();
+        this.updateActivityStream();
+    }
+
+    updateRealTimeMetrics() {
+        // 更新系统性能指标
+        const metrics = this.monitoring.metricsCollector.collectSystemMetrics();
+
+        // 更新进度条
+        this.updateProgressBar('cpu', metrics.cpu);
+        this.updateProgressBar('memory', metrics.memory);
+        this.updateProgressBar('network', metrics.network.in / 10); // 简化显示
+
+        // 更新智能体状态
+        this.updateAgentStatusMetrics();
+
+        // 更新任务统计
+        this.updateTaskStatistics();
+    }
+
+    updateProgressBar(type, value) {
+        const progressBar = document.getElementById(`${type}-progress`);
+        const valueDisplay = document.getElementById(`${type}-value`);
+
+        if (progressBar && valueDisplay) {
+            progressBar.style.width = `${value}%`;
+
+            if (type === 'network') {
+                valueDisplay.textContent = `${value.toFixed(1)} MB/s`;
+            } else {
+                valueDisplay.textContent = `${Math.round(value)}%`;
+            }
+
+            // 根据使用率设置颜色
+            progressBar.className = 'progress-fill';
+            if (value > 80) {
+                progressBar.classList.add('critical');
+            } else if (value > 60) {
+                progressBar.classList.add('warning');
+            } else {
+                progressBar.classList.add('normal');
+            }
+        }
+    }
+
+    updateAgentStatusMetrics() {
+        const agents = Array.from(this.agents.values());
+        const online = agents.filter(a => a.status === 'ready' || a.status === 'running').length;
+        const busy = agents.filter(a => a.status === 'busy').length;
+        const offline = agents.filter(a => a.status === 'offline' || a.status === 'error').length;
+
+        document.getElementById('total-agents').textContent = agents.length;
+        document.getElementById('agents-online').textContent = online;
+        document.getElementById('agents-busy').textContent = busy;
+        document.getElementById('agents-offline').textContent = offline;
+
+        // 更新饼图
+        if (this.charts.agentStatus) {
+            this.charts.agentStatus.data.datasets[0].data = [online, busy, offline];
+            this.charts.agentStatus.update();
+        }
+    }
+
+    updateTaskStatistics() {
+        const stats = this.taskScheduler.getTaskStats();
+
+        document.getElementById('tasks-completed').textContent = stats.completed.toLocaleString();
+        document.getElementById('tasks-running').textContent = this.taskScheduler.runningTasks.size;
+        document.getElementById('tasks-queued').textContent = Array.from(this.taskScheduler.queues.values())
+            .reduce((total, queue) => total + queue.length, 0);
+        document.getElementById('tasks-failed').textContent = stats.failed;
+    }
+
+    updateActivityStream() {
+        const activityList = document.getElementById('activity-list');
+        if (!activityList) return;
+
+        // 生成模拟活动
+        const activities = this.generateMockActivities();
+
+        // 保持最多50个活动项
+        while (activityList.children.length >= 50) {
+            activityList.removeChild(activityList.lastChild);
+        }
+
+        // 添加新活动
+        activities.forEach(activity => {
+            const activityElement = document.createElement('div');
+            activityElement.className = `activity-item ${activity.type}`;
+            activityElement.innerHTML = `
+                <div class="activity-icon">
+                    <i class="${activity.icon}"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-message">${activity.message}</div>
+                    <div class="activity-time">${activity.time}</div>
+                </div>
+                <div class="activity-status ${activity.status}">
+                    ${activity.statusText}
+                </div>
+            `;
+            activityList.insertBefore(activityElement, activityList.firstChild);
+        });
+    }
+
+    generateMockActivities() {
+        const activities = [
+            {
+                type: 'agent',
+                icon: 'fas fa-robot',
+                message: '智能体 DataProcessor-01 开始执行任务',
+                time: new Date().toLocaleTimeString(),
+                status: 'running',
+                statusText: '运行中'
+            },
+            {
+                type: 'task',
+                icon: 'fas fa-tasks',
+                message: '任务 #1247 执行完成',
+                time: new Date().toLocaleTimeString(),
+                status: 'completed',
+                statusText: '已完成'
+            },
+            {
+                type: 'system',
+                icon: 'fas fa-cog',
+                message: '系统健康检查通过',
+                time: new Date().toLocaleTimeString(),
+                status: 'healthy',
+                statusText: '正常'
+            }
+        ];
+
+        // 随机返回1-2个活动
+        return activities.slice(0, Math.floor(Math.random() * 2) + 1);
+    }
+
+    refreshMonitoring() {
+        this.showNotification('监控数据已刷新', 'success');
+        this.updateRealTimeMetrics();
+    }
+
+    exportMonitoringData() {
+        this.showNotification('监控数据导出功能开发中...', 'info');
+    }
+
+    openMonitoringSettings() {
+        this.openModal('监控设置', `
+            <div class="monitoring-settings">
+                <div class="setting-group">
+                    <label>刷新间隔</label>
+                    <select>
+                        <option value="1000">1秒</option>
+                        <option value="2000" selected>2秒</option>
+                        <option value="5000">5秒</option>
+                        <option value="10000">10秒</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>告警阈值</label>
+                    <div class="threshold-settings">
+                        <div>
+                            <label>CPU使用率警告: </label>
+                            <input type="range" min="50" max="95" value="80"> 80%
+                        </div>
+                        <div>
+                            <label>内存使用率警告: </label>
+                            <input type="range" min="50" max="95" value="85"> 85%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+
+    pauseActivityStream() {
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
+            this.monitoringInterval = null;
+            this.showNotification('实时监控已暂停', 'info');
+        }
+    }
+
+    clearActivityStream() {
+        const activityList = document.getElementById('activity-list');
+        if (activityList) {
+            activityList.innerHTML = '';
+            this.showNotification('活动记录已清空', 'success');
+        }
+    }
+
+    // 新手教程系统
+    checkShowTutorial() {
+        // 总是添加教程按钮，让用户可以随时启动教程
+        this.addTutorialButton();
+
+        // 检查用户是否已经完成过教程
+        const hasCompletedTutorial = localStorage.getItem('tutorial_completed');
+
+        if (!hasCompletedTutorial) {
+            // 延迟2秒显示教程，让用户看到初始化完成并注意到教程按钮
+            setTimeout(() => {
+                this.showWelcomeMessage();
+            }, 2000);
+        }
+    }
+
+    showWelcomeMessage() {
+        // 显示欢迎消息，引导用户开始教程
+        this.openModal('🎉 欢迎使用多智能体管理平台！', `
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 64px; margin-bottom: 20px;">🤖</div>
+                <h3 style="color: var(--text-primary); margin-bottom: 16px;">
+                    欢迎来到企业级多智能体管理平台
+                </h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6;">
+                    这是一个功能强大的智能体协作平台，包含智能体管理、任务调度、工作流设计、实时监控等完整功能。
+                </p>
+                <div style="background: var(--background-secondary); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                    <p style="margin: 0; color: var(--text-primary);">
+                        <i class="fas fa-lightbulb" style="color: var(--primary-color); margin-right: 8px;"></i>
+                        建议先观看新手教程，快速了解平台功能
+                    </p>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        稍后再说
+                    </button>
+                    <button class="btn btn-primary" onclick="closeModal(); platform.startTutorial();">
+                        <i class="fas fa-play" style="margin-right: 8px;"></i>
+                        开始教程
+                    </button>
+                </div>
+            </div>
+        `);
+    }
+
+    addTutorialButton() {
+        const toolbar = document.querySelector('.toolbar-right');
+        if (toolbar && !document.getElementById('tutorial-btn')) {
+            const tutorialBtn = document.createElement('button');
+            tutorialBtn.id = 'tutorial-btn';
+            tutorialBtn.className = 'btn-icon';
+            tutorialBtn.title = '新手教程 - 点击开始学习平台使用方法';
+            tutorialBtn.innerHTML = '<i class="fas fa-question-circle"></i>';
+            tutorialBtn.addEventListener('click', () => {
+                console.log('教程按钮被点击');
+                this.startTutorial();
+            });
+
+            // 插入到通知按钮之前
+            const notificationBtn = toolbar.querySelector('.notification-btn');
+            if (notificationBtn) {
+                toolbar.insertBefore(tutorialBtn, notificationBtn);
+            } else {
+                toolbar.insertBefore(tutorialBtn, toolbar.firstChild);
+            }
+
+            // 添加一个明显的提示
+            tutorialBtn.style.cssText = `
+                background-color: var(--primary-color);
+                color: white;
+                border-radius: 50%;
+                animation: bounce 2s infinite;
+            `;
+
+            console.log('教程按钮已添加到工具栏');
+        }
+    }
+
+    startTutorial() {
+        this.currentTutorialStep = 0;
+        this.tutorialSteps = [
+            {
+                target: '.sidebar',
+                title: '欢迎使用多智能体管理平台！',
+                content: '这是侧边栏导航，您可以在这里访问平台的各个功能模块。让我们开始快速导览吧！',
+                position: 'right',
+                action: () => {}
+            },
+            {
+                target: '[data-section="dashboard"]',
+                title: '仪表板概览',
+                content: '仪表板提供系统的整体概览，包括智能体状态、任务统计和系统性能指标。',
+                position: 'right',
+                action: () => {
+                    // 确保仪表板是活跃状态
+                    document.querySelector('[data-section="dashboard"]').click();
+                }
+            },
+            {
+                target: '.stats-grid',
+                title: '关键指标',
+                content: '这里显示了系统的关键性能指标：活跃智能体数量、运行中的任务、系统吞吐量和资源使用率。',
+                position: 'bottom',
+                action: () => {}
+            },
+            {
+                target: '[data-section="agents"]',
+                title: '智能体管理',
+                content: '在这里您可以查看、创建、配置和管理所有智能体。每个智能体都有特定的能力和用途。',
+                position: 'right',
+                action: () => {
+                    document.querySelector('[data-section="agents"]').click();
+                }
+            },
+            {
+                target: '#create-agent-btn',
+                title: '创建智能体',
+                content: '点击这个按钮可以创建新的智能体。您可以选择不同类型的智能体来处理特定任务。',
+                position: 'bottom',
+                action: () => {}
+            },
+            {
+                target: '[data-section="tasks"]',
+                title: '任务调度',
+                content: '任务调度模块让您可以创建、分配和监控任务的执行。支持优先级管理和负载均衡。',
+                position: 'right',
+                action: () => {
+                    document.querySelector('[data-section="tasks"]').click();
+                }
+            },
+            {
+                target: '[data-section="workflow"]',
+                title: '工作流设计',
+                content: '工作流设计器允许您创建复杂的多步骤流程，实现智能体之间的协作和任务编排。',
+                position: 'right',
+                action: () => {
+                    document.querySelector('[data-section="workflow"]').click();
+                }
+            },
+            {
+                target: '[data-section="monitoring"]',
+                title: '实时监控',
+                content: '监控面板提供系统性能、智能体状态和实时活动的全面监控，帮助您掌握系统运行状况。',
+                position: 'right',
+                action: () => {
+                    document.querySelector('[data-section="monitoring"]').click();
+                }
+            },
+            {
+                target: '[data-section="dsl-editor"]',
+                title: 'DSL编辑器',
+                content: 'DSL编辑器是平台的核心功能，您可以在这里编写和测试多智能体协作的DSL程序。',
+                position: 'right',
+                action: () => {
+                    document.querySelector('[data-section="dsl-editor"]').click();
+                }
+            },
+            {
+                target: '.toolbar',
+                title: '工具栏功能',
+                content: '顶部工具栏包含通知、用户设置和系统操作。右上角的问号图标可以随时重新打开本教程。',
+                position: 'bottom',
+                action: () => {}
+            }
+        ];
+
+        this.showTutorialStep();
+    }
+
+    showTutorialStep() {
+        if (this.currentTutorialStep >= this.tutorialSteps.length) {
+            this.completeTutorial();
+            return;
+        }
+
+        const step = this.tutorialSteps[this.currentTutorialStep];
+
+        // 执行步骤动作
+        step.action();
+
+        // 等待动作完成后显示提示
+        setTimeout(() => {
+            this.createTutorialOverlay(step);
+        }, 500);
+    }
+
+    createTutorialOverlay(step) {
+        // 移除之前的教程覆盖层
+        this.removeTutorialOverlay();
+
+        // 创建覆盖层
+        const overlay = document.createElement('div');
+        overlay.id = 'tutorial-overlay';
+        overlay.className = 'tutorial-overlay';
+
+        // 创建背景遮罩
+        const backdrop = document.createElement('div');
+        backdrop.className = 'tutorial-backdrop';
+        overlay.appendChild(backdrop);
+
+        // 找到目标元素
+        const targetElement = document.querySelector(step.target);
+        if (!targetElement) {
+            console.warn(`教程目标元素未找到: ${step.target}`);
+            this.nextTutorialStep();
+            return;
+        }
+
+        // 高亮目标元素
+        const rect = targetElement.getBoundingClientRect();
+        const highlight = document.createElement('div');
+        highlight.className = 'tutorial-highlight';
+        highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 8}px;
+            left: ${rect.left - 8}px;
+            width: ${rect.width + 16}px;
+            height: ${rect.height + 16}px;
+            pointer-events: none;
+            z-index: 10001;
+        `;
+        overlay.appendChild(highlight);
+
+        // 创建提示框
+        const tooltip = document.createElement('div');
+        tooltip.className = `tutorial-tooltip tooltip-${step.position}`;
+        tooltip.innerHTML = `
+            <div class="tutorial-header">
+                <h3>${step.title}</h3>
+                <div class="tutorial-progress">
+                    <span>${this.currentTutorialStep + 1}</span> / <span>${this.tutorialSteps.length}</span>
+                </div>
+            </div>
+            <div class="tutorial-content">
+                <p>${step.content}</p>
+            </div>
+            <div class="tutorial-actions">
+                ${this.currentTutorialStep > 0 ? '<button class="btn btn-secondary" onclick="platform.prevTutorialStep()">上一步</button>' : ''}
+                <button class="btn btn-secondary" onclick="platform.skipTutorial()">跳过教程</button>
+                <button class="btn btn-primary" onclick="platform.nextTutorialStep()">
+                    ${this.currentTutorialStep === this.tutorialSteps.length - 1 ? '完成教程' : '下一步'}
+                </button>
+            </div>
+        `;
+
+        // 定位提示框
+        this.positionTooltip(tooltip, rect, step.position);
+        overlay.appendChild(tooltip);
+
+        // 添加到页面
+        document.body.appendChild(overlay);
+
+        // 添加键盘事件监听
+        this.addTutorialKeyboardEvents();
+    }
+
+    positionTooltip(tooltip, targetRect, position) {
+        const tooltipWidth = 350;
+        const tooltipMargin = 20;
+
+        let top, left;
+
+        switch (position) {
+            case 'right':
+                top = targetRect.top + (targetRect.height / 2) - 100;
+                left = targetRect.right + tooltipMargin;
+                break;
+            case 'left':
+                top = targetRect.top + (targetRect.height / 2) - 100;
+                left = targetRect.left - tooltipWidth - tooltipMargin;
+                break;
+            case 'bottom':
+                top = targetRect.bottom + tooltipMargin;
+                left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
+                break;
+            case 'top':
+                top = targetRect.top - 200 - tooltipMargin;
+                left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
+                break;
+            default:
+                top = targetRect.bottom + tooltipMargin;
+                left = targetRect.left;
+        }
+
+        // 确保提示框在视窗内
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        if (left + tooltipWidth > viewportWidth) {
+            left = viewportWidth - tooltipWidth - 20;
+        }
+        if (left < 20) {
+            left = 20;
+        }
+        if (top < 20) {
+            top = 20;
+        }
+        if (top + 200 > viewportHeight) {
+            top = viewportHeight - 220;
+        }
+
+        tooltip.style.cssText = `
+            position: fixed;
+            top: ${top}px;
+            left: ${left}px;
+            width: ${tooltipWidth}px;
+            z-index: 10002;
+        `;
+    }
+
+    addTutorialKeyboardEvents() {
+        const handleKeyPress = (e) => {
+            if (e.key === 'Escape') {
+                this.skipTutorial();
+            } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+                this.nextTutorialStep();
+            } else if (e.key === 'ArrowLeft' && this.currentTutorialStep > 0) {
+                this.prevTutorialStep();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyPress);
+
+        // 保存引用以便稍后移除
+        this.tutorialKeyboardHandler = handleKeyPress;
+    }
+
+    removeTutorialKeyboardEvents() {
+        if (this.tutorialKeyboardHandler) {
+            document.removeEventListener('keydown', this.tutorialKeyboardHandler);
+            this.tutorialKeyboardHandler = null;
+        }
+    }
+
+    nextTutorialStep() {
+        this.currentTutorialStep++;
+        this.showTutorialStep();
+    }
+
+    prevTutorialStep() {
+        if (this.currentTutorialStep > 0) {
+            this.currentTutorialStep--;
+            this.showTutorialStep();
+        }
+    }
+
+    skipTutorial() {
+        this.removeTutorialOverlay();
+        this.removeTutorialKeyboardEvents();
+        this.completeTutorial();
+    }
+
+    completeTutorial() {
+        this.removeTutorialOverlay();
+        this.removeTutorialKeyboardEvents();
+
+        // 标记教程已完成
+        localStorage.setItem('tutorial_completed', 'true');
+
+        // 添加教程按钮
+        this.addTutorialButton();
+
+        // 显示完成消息
+        this.showNotification('🎉 教程完成！您现在可以开始使用平台了。', 'success');
+
+        // 返回到仪表板
+        document.querySelector('[data-section="dashboard"]').click();
+    }
+
+    removeTutorialOverlay() {
+        const overlay = document.getElementById('tutorial-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
+    resetTutorial() {
+        localStorage.removeItem('tutorial_completed');
+        this.showNotification('教程已重置！正在启动新手体验...', 'info');
+
+        // 移除现有的教程按钮
+        const existingBtn = document.getElementById('tutorial-btn');
+        if (existingBtn) {
+            existingBtn.remove();
+        }
+
+        // 重新检查和显示教程
+        setTimeout(() => {
+            this.checkShowTutorial();
+        }, 1000);
     }
 
     // 更新统计数据
@@ -866,8 +2100,93 @@ function createNewAgent() {
     `);
 }
 
-function deployWorkflow() {
-    platform.showNotification('工作流部署功能正在开发中...', 'info');
+async function deployWorkflow() {
+    const workflowName = document.getElementById('workflow-name').value;
+    const workflowDescription = document.getElementById('workflow-description').value;
+
+    if (!workflowName) {
+        platform.showNotification('请输入工作流名称', 'warning');
+        return;
+    }
+
+    try {
+        platform.showNotification('正在部署工作流...', 'info');
+
+        // 创建工作流配置
+        const workflowConfig = {
+            name: workflowName,
+            description: workflowDescription,
+            nodes: window.workflowNodes || [],
+            edges: window.workflowEdges || [],
+            variables: {},
+            triggers: ['manual']
+        };
+
+        // 使用工作流引擎创建工作流
+        const workflow = await window.platform.workflowEngine.createWorkflow(workflowConfig);
+
+        platform.showNotification(`工作流 "${workflowName}" 部署成功！`, 'success');
+
+        // 更新工作流列表
+        updateWorkflowList();
+
+        // 清空表单
+        document.getElementById('workflow-name').value = '';
+        document.getElementById('workflow-description').value = '';
+
+    } catch (error) {
+        platform.showNotification(`工作流部署失败: ${error.message}`, 'error');
+    }
+}
+
+function updateWorkflowList() {
+    const workflows = window.platform.workflowEngine.getWorkflows();
+    const workflowList = document.getElementById('workflow-list');
+
+    if (workflowList) {
+        workflowList.innerHTML = workflows.map(workflow => `
+            <div class="workflow-item">
+                <div class="workflow-info">
+                    <h4>${workflow.name}</h4>
+                    <p>${workflow.description || '无描述'}</p>
+                    <span class="workflow-status ${workflow.status}">${workflow.status}</span>
+                </div>
+                <div class="workflow-actions">
+                    <button class="btn btn-small primary" onclick="executeWorkflow('${workflow.id}')">
+                        <i class="fas fa-play"></i> 执行
+                    </button>
+                    <button class="btn btn-small secondary" onclick="editWorkflow('${workflow.id}')">
+                        <i class="fas fa-edit"></i> 编辑
+                    </button>
+                    <button class="btn btn-small danger" onclick="deleteWorkflow('${workflow.id}')">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+async function executeWorkflow(workflowId) {
+    try {
+        platform.showNotification('正在执行工作流...', 'info');
+        const execution = await window.platform.workflowEngine.executeWorkflow(workflowId);
+        platform.showNotification(`工作流执行完成，执行ID: ${execution.id}`, 'success');
+    } catch (error) {
+        platform.showNotification(`工作流执行失败: ${error.message}`, 'error');
+    }
+}
+
+function editWorkflow(workflowId) {
+    platform.showNotification('工作流编辑功能开发中...', 'info');
+}
+
+function deleteWorkflow(workflowId) {
+    if (confirm('确定要删除此工作流吗？')) {
+        window.platform.workflowEngine.workflows.delete(workflowId);
+        updateWorkflowList();
+        platform.showNotification('工作流已删除', 'success');
+    }
 }
 
 function runDiagnostic() {
@@ -927,5 +2246,2349 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// 真实的API调用函数
+MultiAgentPlatform.prototype.apiCall = async function(endpoint, options = {}) {
+    if (this.config.demoMode) {
+        return this.simulateApiCall(endpoint, options);
+    }
+
+    const url = this.config.apiBaseUrl + endpoint;
+    const defaultOptions = {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+        }
+    };
+
+    const finalOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: { ...defaultOptions.headers, ...options.headers }
+    };
+
+    if (finalOptions.body && typeof finalOptions.body === 'object') {
+        finalOptions.body = JSON.stringify(finalOptions.body);
+    }
+
+    try {
+        const response = await fetch(url, finalOptions);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || `HTTP ${response.status}`);
+        }
+
+        return data;
+    } catch (error) {
+        console.error(`API调用失败 [${finalOptions.method} ${endpoint}]:`, error);
+        throw error;
+    }
+};
+
+// 模拟API调用（演示模式）
+MultiAgentPlatform.prototype.simulateApiCall = async function(endpoint, options = {}) {
+    // 模拟网络延迟
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 800 + 200));
+
+    // 模拟不同API端点的响应
+    const responses = {
+        '/health': { status: 'healthy', timestamp: new Date().toISOString() },
+        '/auth/verify': { success: true, user: this.state.currentUser },
+        '/agents': { success: true, data: Array.from(this.agents.values()) },
+        '/tasks': { success: true, data: Array.from(this.tasks.values()) },
+        '/system/metrics': { success: true, data: this.realTimeData.systemMetrics }
+    };
+
+    // 检查端点是否存在模拟响应
+    if (responses[endpoint]) {
+        return responses[endpoint];
+    }
+
+    // 模拟成功响应
+    if (Math.random() > 0.05) { // 95%成功率
+        return {
+            success: true,
+            data: options.body || {},
+            message: '操作成功',
+            timestamp: new Date().toISOString()
+        };
+    } else {
+        throw new Error('模拟的网络错误');
+    }
+};
+
+// 智能体生命周期管理
+MultiAgentPlatform.prototype.createAgent = async function(agentConfig) {
+    try {
+        this.setState({ loading: true });
+
+        const response = await this.apiCall('/agents', {
+            method: 'POST',
+            body: agentConfig
+        });
+
+        if (response.success) {
+            const newAgent = {
+                id: response.data.id || `agent-${Date.now()}`,
+                ...agentConfig,
+                status: 'initializing',
+                createdAt: new Date(),
+                lastActive: new Date(),
+                cpu: 0,
+                memory: 0,
+                tasks: 0
+            };
+
+            this.agents.set(newAgent.id, newAgent);
+            this.updateAgentsList();
+            this.showNotification(`智能体 ${newAgent.name} 创建成功`, 'success');
+
+            // 异步启动智能体
+            setTimeout(() => this.startAgent(newAgent.id), 2000);
+
+            return newAgent;
+        }
+    } catch (error) {
+        this.showNotification(`创建智能体失败: ${error.message}`, 'error');
+        throw error;
+    } finally {
+        this.setState({ loading: false });
+    }
+};
+
+MultiAgentPlatform.prototype.startAgent = async function(agentId) {
+    try {
+        const agent = this.agents.get(agentId);
+        if (!agent) throw new Error('智能体不存在');
+
+        agent.status = 'starting';
+        this.updateAgentCard(agent);
+
+        const response = await this.apiCall(`/agents/${agentId}/start`, {
+            method: 'POST'
+        });
+
+        if (response.success) {
+            agent.status = 'running';
+            agent.lastActive = new Date();
+            this.updateAgentCard(agent);
+            this.showNotification(`智能体 ${agent.name} 启动成功`, 'success');
+        }
+    } catch (error) {
+        const agent = this.agents.get(agentId);
+        if (agent) {
+            agent.status = 'failed';
+            this.updateAgentCard(agent);
+        }
+        this.showNotification(`启动智能体失败: ${error.message}`, 'error');
+    }
+};
+
+MultiAgentPlatform.prototype.stopAgent = async function(agentId) {
+    try {
+        const agent = this.agents.get(agentId);
+        if (!agent) throw new Error('智能体不存在');
+
+        agent.status = 'stopping';
+        this.updateAgentCard(agent);
+
+        const response = await this.apiCall(`/agents/${agentId}/stop`, {
+            method: 'POST'
+        });
+
+        if (response.success) {
+            agent.status = 'stopped';
+            agent.cpu = 0;
+            agent.tasks = 0;
+            this.updateAgentCard(agent);
+            this.showNotification(`智能体 ${agent.name} 已停止`, 'success');
+        }
+    } catch (error) {
+        this.showNotification(`停止智能体失败: ${error.message}`, 'error');
+    }
+};
+
+// WebSocket集成
+MultiAgentPlatform.prototype.initializeWebSocket = function() {
+    if (!this.config.enableRealTime) return;
+
+    try {
+        this.websocket = new WebSocket(this.config.websocketUrl);
+
+        this.websocket.onopen = () => {
+            console.log('WebSocket连接已建立');
+            this.setState({ connected: true });
+        };
+
+        this.websocket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                this.handleWebSocketMessage(data);
+            } catch (error) {
+                console.error('WebSocket消息解析失败:', error);
+            }
+        };
+
+        this.websocket.onclose = () => {
+            console.log('WebSocket连接已关闭');
+            this.setState({ connected: false });
+
+            // 尝试重连
+            setTimeout(() => {
+                if (this.websocket?.readyState === WebSocket.CLOSED) {
+                    this.initializeWebSocket();
+                }
+            }, 5000);
+        };
+
+        this.websocket.onerror = (error) => {
+            console.error('WebSocket错误:', error);
+        };
+
+    } catch (error) {
+        console.warn('WebSocket初始化失败，使用轮询模式:', error);
+        this.startPollingMode();
+    }
+};
+
+// 处理WebSocket消息
+MultiAgentPlatform.prototype.handleWebSocketMessage = function(data) {
+    switch (data.type) {
+        case 'agent_status':
+            this.updateAgentStatus(data.agentId, data.status);
+            break;
+        case 'task_update':
+            this.updateTaskStatus(data.taskId, data.status, data.progress);
+            break;
+        case 'system_metrics':
+            this.updateSystemMetrics(data.metrics);
+            break;
+        case 'log_entry':
+            this.addLogEntry(data.log);
+            break;
+        case 'notification':
+            this.showNotification(data.message, data.level);
+            break;
+        default:
+            console.log('未知的WebSocket消息类型:', data.type);
+    }
+};
+
+// 任务管理增强
+MultiAgentPlatform.prototype.createTask = async function(taskConfig) {
+    try {
+        const response = await this.apiCall('/tasks', {
+            method: 'POST',
+            body: taskConfig
+        });
+
+        if (response.success) {
+            const newTask = {
+                id: response.data.id || `task-${Date.now()}`,
+                ...taskConfig,
+                status: 'pending',
+                progress: 0,
+                createdAt: new Date()
+            };
+
+            this.tasks.set(newTask.id, newTask);
+            this.updateTasksList();
+            this.showNotification(`任务 ${newTask.name} 创建成功`, 'success');
+
+            return newTask;
+        }
+    } catch (error) {
+        this.showNotification(`创建任务失败: ${error.message}`, 'error');
+        throw error;
+    }
+};
+
+// 模态对话框管理
+MultiAgentPlatform.prototype.showCreateAgentModal = function() {
+    const modal = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+
+    modalTitle.textContent = '创建新智能体';
+    modalBody.innerHTML = `
+        <form id="create-agent-form" onsubmit="return false;">
+            <div class="form-group">
+                <label for="agent-name">智能体名称</label>
+                <input type="text" id="agent-name" required placeholder="例如：DataProcessor-03">
+            </div>
+            <div class="form-group">
+                <label for="agent-type">智能体类型</label>
+                <select id="agent-type" required>
+                    ${this.config.agentTypes.map(type =>
+                        `<option value="${type}">${type}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="agent-description">描述</label>
+                <textarea id="agent-description" placeholder="智能体的功能描述"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="agent-memory">内存限制 (MB)</label>
+                <input type="number" id="agent-memory" value="2048" min="512" max="16384">
+            </div>
+            <div class="form-group">
+                <label for="agent-cpu">CPU核心数</label>
+                <input type="number" id="agent-cpu" value="2" min="1" max="16">
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn secondary" onclick="closeModal()">取消</button>
+                <button type="button" class="btn primary" onclick="submitCreateAgent()">创建</button>
+            </div>
+        </form>
+    `;
+
+    modal.style.display = 'flex';
+};
+
+MultiAgentPlatform.prototype.showCreateTaskModal = function() {
+    const modal = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+
+    modalTitle.textContent = '创建新任务';
+    modalBody.innerHTML = `
+        <form id="create-task-form" onsubmit="return false;">
+            <div class="form-group">
+                <label for="task-name">任务名称</label>
+                <input type="text" id="task-name" required placeholder="例如：数据处理任务">
+            </div>
+            <div class="form-group">
+                <label for="task-description">任务描述</label>
+                <textarea id="task-description" placeholder="详细描述任务的目标和要求"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="task-priority">优先级</label>
+                <select id="task-priority" required>
+                    <option value="low">低</option>
+                    <option value="medium" selected>中</option>
+                    <option value="high">高</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="task-agent">分配智能体</label>
+                <select id="task-agent">
+                    <option value="">自动分配</option>
+                    ${Array.from(this.agents.values())
+                        .filter(agent => agent.status === 'running' || agent.status === 'idle')
+                        .map(agent =>
+                            `<option value="${agent.id}">${agent.name} (${agent.type})</option>`
+                        ).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="task-timeout">超时时间（分钟）</label>
+                <input type="number" id="task-timeout" value="30" min="1" max="1440">
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn secondary" onclick="closeModal()">取消</button>
+                <button type="button" class="btn primary" onclick="submitCreateTask()">创建</button>
+            </div>
+        </form>
+    `;
+
+    modal.style.display = 'flex';
+};
+
+// 全局函数（供HTML调用）
+window.platform = null;
+window.createNewAgent = () => window.platform?.showCreateAgentModal();
+window.startAgent = (id) => window.platform?.startAgent(id);
+window.stopAgent = (id) => window.platform?.stopAgent(id);
+window.deleteAgent = (id) => window.platform?.deleteAgent(id);
+window.createNewTask = () => window.platform?.showCreateTaskModal();
+window.executeTask = (id) => window.platform?.executeTask(id);
+window.runDSLCode = () => window.platform?.executeDSLCode();
+window.sendRequest = () => window.platform?.sendApiRequest();
+window.refreshMonitoring = () => window.platform?.refreshMonitoringData();
+window.exportReport = () => window.platform?.exportSystemReport();
+
+window.submitCreateAgent = async function() {
+    const form = document.getElementById('create-agent-form');
+    const formData = new FormData(form);
+
+    const agentConfig = {
+        name: document.getElementById('agent-name').value,
+        type: document.getElementById('agent-type').value,
+        description: document.getElementById('agent-description').value,
+        config: {
+            memory: parseInt(document.getElementById('agent-memory').value),
+            cpu: parseInt(document.getElementById('agent-cpu').value)
+        }
+    };
+
+    try {
+        await window.platform.createAgent(agentConfig);
+        closeModal();
+    } catch (error) {
+        console.error('创建智能体失败:', error);
+    }
+};
+
+window.submitCreateTask = async function() {
+    const taskConfig = {
+        name: document.getElementById('task-name').value,
+        description: document.getElementById('task-description').value,
+        priority: document.getElementById('task-priority').value,
+        assignedAgent: document.getElementById('task-agent').value || null,
+        timeout: parseInt(document.getElementById('task-timeout').value) * 60000 // 转换为毫秒
+    };
+
+    try {
+        await window.platform.createTask(taskConfig);
+        closeModal();
+    } catch (error) {
+        console.error('创建任务失败:', error);
+    }
+};
+
+window.closeModal = function() {
+    const modal = document.getElementById('modal-overlay');
+    modal.style.display = 'none';
+};
+
+// 监控和日志系统核心类
+class LogCollector {
+    constructor() {
+        this.logs = [];
+        this.filters = new Set();
+        this.maxLogs = 10000;
+        this.logLevels = ['debug', 'info', 'warn', 'error', 'critical'];
+        this.elasticsearchClient = null;
+    }
+
+    async init(config) {
+        if (config.elasticsearch) {
+            this.elasticsearchClient = new ElasticsearchClient(config.elasticsearch);
+        }
+    }
+
+    log(level, message, metadata = {}) {
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            level,
+            message,
+            metadata: {
+                ...metadata,
+                source: 'multi-agent-platform',
+                sessionId: this.getSessionId(),
+                userId: this.getCurrentUserId()
+            }
+        };
+
+        this.logs.push(logEntry);
+
+        // 限制内存中的日志数量
+        if (this.logs.length > this.maxLogs) {
+            this.logs.shift();
+        }
+
+        // 发送到 Elasticsearch
+        this.sendToElasticsearch(logEntry);
+
+        // 触发实时更新
+        this.triggerLogUpdate(logEntry);
+
+        // 控制台输出
+        this.consoleOutput(logEntry);
+    }
+
+    async sendToElasticsearch(logEntry) {
+        if (!this.elasticsearchClient) return;
+
+        try {
+            await this.elasticsearchClient.index({
+                index: `multi-agent-logs-${new Date().toISOString().split('T')[0]}`,
+                body: logEntry
+            });
+        } catch (error) {
+            console.error('Failed to send log to Elasticsearch:', error);
+        }
+    }
+
+    triggerLogUpdate(logEntry) {
+        window.dispatchEvent(new CustomEvent('logUpdate', { detail: logEntry }));
+    }
+
+    consoleOutput(logEntry) {
+        const { level, message, metadata } = logEntry;
+        const style = this.getConsoleStyle(level);
+        console.log(`%c[${level.toUpperCase()}] ${message}`, style, metadata);
+    }
+
+    getConsoleStyle(level) {
+        const styles = {
+            debug: 'color: #888',
+            info: 'color: #2196F3',
+            warn: 'color: #FF9800',
+            error: 'color: #F44336',
+            critical: 'color: #F44336; font-weight: bold; background: #FFEBEE'
+        };
+        return styles[level] || 'color: #000';
+    }
+
+    getSessionId() {
+        return sessionStorage.getItem('sessionId') || 'unknown';
+    }
+
+    getCurrentUserId() {
+        return localStorage.getItem('userId') || 'anonymous';
+    }
+
+    getLogs(filters = {}) {
+        let filteredLogs = [...this.logs];
+
+        if (filters.level) {
+            filteredLogs = filteredLogs.filter(log => log.level === filters.level);
+        }
+
+        if (filters.startTime) {
+            filteredLogs = filteredLogs.filter(log =>
+                new Date(log.timestamp) >= new Date(filters.startTime)
+            );
+        }
+
+        if (filters.endTime) {
+            filteredLogs = filteredLogs.filter(log =>
+                new Date(log.timestamp) <= new Date(filters.endTime)
+            );
+        }
+
+        if (filters.search) {
+            filteredLogs = filteredLogs.filter(log =>
+                log.message.toLowerCase().includes(filters.search.toLowerCase())
+            );
+        }
+
+        return filteredLogs.slice(-1000); // 最多返回1000条
+    }
+}
+
+class MetricsCollector {
+    constructor() {
+        this.metrics = new Map();
+        this.collectors = new Map();
+        this.exporters = new Map();
+        this.prometheus = null;
+    }
+
+    async init(config) {
+        if (config.prometheus) {
+            this.prometheus = new PrometheusClient(config.prometheus);
+        }
+        this.startCollection();
+    }
+
+    startCollection() {
+        // 系统指标收集
+        this.collectSystemMetrics();
+
+        // 应用指标收集
+        this.collectApplicationMetrics();
+
+        // 业务指标收集
+        this.collectBusinessMetrics();
+
+        // 定期收集
+        setInterval(() => {
+            this.collectAllMetrics();
+        }, 5000);
+    }
+
+    collectSystemMetrics() {
+        const systemMetrics = {
+            timestamp: Date.now(),
+            cpu: this.getCPUUsage(),
+            memory: this.getMemoryUsage(),
+            disk: this.getDiskUsage(),
+            network: this.getNetworkStats()
+        };
+
+        this.recordMetric('system_metrics', systemMetrics);
+        return systemMetrics;
+    }
+
+    collectApplicationMetrics() {
+        const appMetrics = {
+            timestamp: Date.now(),
+            activeAgents: window.platform?.agents?.size || 0,
+            runningTasks: window.platform?.getRunningTasks()?.length || 0,
+            queuedTasks: window.platform?.getQueuedTasks()?.length || 0,
+            errorRate: this.calculateErrorRate(),
+            responseTime: this.getAverageResponseTime()
+        };
+
+        this.recordMetric('application_metrics', appMetrics);
+        return appMetrics;
+    }
+
+    collectBusinessMetrics() {
+        const businessMetrics = {
+            timestamp: Date.now(),
+            tasksCompleted: this.getCompletedTasksCount(),
+            tasksPerMinute: this.getTasksPerMinute(),
+            agentUtilization: this.getAgentUtilization(),
+            workflowSuccessRate: this.getWorkflowSuccessRate()
+        };
+
+        this.recordMetric('business_metrics', businessMetrics);
+        return businessMetrics;
+    }
+
+    recordMetric(name, value) {
+        if (!this.metrics.has(name)) {
+            this.metrics.set(name, []);
+        }
+
+        const metrics = this.metrics.get(name);
+        metrics.push(value);
+
+        // 保持最近1000个数据点
+        if (metrics.length > 1000) {
+            metrics.shift();
+        }
+
+        // 发送到 Prometheus
+        this.sendToPrometheus(name, value);
+
+        // 触发更新事件
+        window.dispatchEvent(new CustomEvent('metricsUpdate', {
+            detail: { name, value }
+        }));
+    }
+
+    async sendToPrometheus(name, value) {
+        if (!this.prometheus) return;
+
+        try {
+            await this.prometheus.pushGateway(name, value);
+        } catch (error) {
+            console.error('Failed to send metrics to Prometheus:', error);
+        }
+    }
+
+    getCPUUsage() {
+        // 模拟 CPU 使用率
+        return Math.random() * 100;
+    }
+
+    getMemoryUsage() {
+        if (performance.memory) {
+            const used = performance.memory.usedJSHeapSize;
+            const total = performance.memory.totalJSHeapSize;
+            return (used / total) * 100;
+        }
+        return Math.random() * 100;
+    }
+
+    getDiskUsage() {
+        // 模拟磁盘使用率
+        return Math.random() * 100;
+    }
+
+    getNetworkStats() {
+        return {
+            in: Math.random() * 1000,
+            out: Math.random() * 800
+        };
+    }
+
+    calculateErrorRate() {
+        const total = this.metrics.get('total_requests') || 0;
+        const errors = this.metrics.get('error_requests') || 0;
+        return total > 0 ? (errors / total) * 100 : 0;
+    }
+
+    getAverageResponseTime() {
+        const responseTimes = this.metrics.get('response_times') || [];
+        if (responseTimes.length === 0) return 0;
+
+        const sum = responseTimes.reduce((a, b) => a + b, 0);
+        return sum / responseTimes.length;
+    }
+
+    getCompletedTasksCount() {
+        return this.metrics.get('completed_tasks_count') || 0;
+    }
+
+    getTasksPerMinute() {
+        const completedTasks = this.metrics.get('application_metrics') || [];
+        const lastMinuteTasks = completedTasks.filter(metric =>
+            Date.now() - metric.timestamp < 60000
+        );
+        return lastMinuteTasks.length;
+    }
+
+    getAgentUtilization() {
+        const totalAgents = window.platform?.agents?.size || 0;
+        const activeAgents = Array.from(window.platform?.agents?.values() || [])
+            .filter(agent => agent.status === 'running').length;
+
+        return totalAgents > 0 ? (activeAgents / totalAgents) * 100 : 0;
+    }
+
+    getWorkflowSuccessRate() {
+        const workflows = this.metrics.get('workflow_executions') || [];
+        const successful = workflows.filter(w => w.status === 'success').length;
+        return workflows.length > 0 ? (successful / workflows.length) * 100 : 100;
+    }
+
+    getMetrics(name, timeRange = 3600000) { // 默认1小时
+        const metrics = this.metrics.get(name) || [];
+        const cutoff = Date.now() - timeRange;
+
+        return metrics.filter(metric => metric.timestamp >= cutoff);
+    }
+}
+
+class HealthChecker {
+    constructor() {
+        this.checks = new Map();
+        this.status = 'healthy';
+        this.issues = [];
+    }
+
+    registerCheck(name, checkFunction, interval = 30000) {
+        this.checks.set(name, {
+            fn: checkFunction,
+            interval,
+            lastRun: 0,
+            status: 'unknown',
+            lastResult: null
+        });
+    }
+
+    async runChecks() {
+        const results = new Map();
+        const now = Date.now();
+
+        for (const [name, check] of this.checks) {
+            if (now - check.lastRun >= check.interval) {
+                try {
+                    const result = await check.fn();
+                    check.status = result.healthy ? 'healthy' : 'unhealthy';
+                    check.lastResult = result;
+                    check.lastRun = now;
+                    results.set(name, result);
+                } catch (error) {
+                    check.status = 'error';
+                    check.lastResult = { healthy: false, error: error.message };
+                    check.lastRun = now;
+                    results.set(name, check.lastResult);
+                }
+            } else {
+                results.set(name, check.lastResult);
+            }
+        }
+
+        this.updateOverallStatus(results);
+        return results;
+    }
+
+    updateOverallStatus(results) {
+        const healthyCount = Array.from(results.values())
+            .filter(result => result?.healthy).length;
+        const totalCount = results.size;
+
+        if (healthyCount === totalCount) {
+            this.status = 'healthy';
+            this.issues = [];
+        } else if (healthyCount >= totalCount * 0.8) {
+            this.status = 'degraded';
+            this.issues = Array.from(results.entries())
+                .filter(([_, result]) => !result?.healthy)
+                .map(([name, result]) => ({ name, issue: result?.error || 'Unknown issue' }));
+        } else {
+            this.status = 'unhealthy';
+            this.issues = Array.from(results.entries())
+                .filter(([_, result]) => !result?.healthy)
+                .map(([name, result]) => ({ name, issue: result?.error || 'Unknown issue' }));
+        }
+
+        window.dispatchEvent(new CustomEvent('healthStatusUpdate', {
+            detail: { status: this.status, issues: this.issues }
+        }));
+    }
+
+    async checkDatabaseConnection() {
+        try {
+            const response = await fetch('/api/v1/health/database');
+            return {
+                healthy: response.ok,
+                latency: Date.now() - response.headers.get('x-request-start'),
+                details: await response.json()
+            };
+        } catch (error) {
+            return { healthy: false, error: error.message };
+        }
+    }
+
+    async checkAPIEndpoints() {
+        try {
+            const response = await fetch('/api/v1/health');
+            return {
+                healthy: response.ok,
+                latency: Date.now() - response.headers.get('x-request-start'),
+                details: await response.json()
+            };
+        } catch (error) {
+            return { healthy: false, error: error.message };
+        }
+    }
+
+    async checkMemoryUsage() {
+        if (performance.memory) {
+            const usage = performance.memory.usedJSHeapSize / performance.memory.totalJSHeapSize;
+            return {
+                healthy: usage < 0.9,
+                usage: usage * 100,
+                details: { current: usage, threshold: 90 }
+            };
+        }
+        return { healthy: true, details: 'Memory monitoring not available' };
+    }
+
+    getHealthStatus() {
+        return {
+            status: this.status,
+            issues: this.issues,
+            checks: Object.fromEntries(
+                Array.from(this.checks.entries()).map(([name, check]) => [
+                    name,
+                    {
+                        status: check.status,
+                        lastRun: check.lastRun,
+                        result: check.lastResult
+                    }
+                ])
+            )
+        };
+    }
+}
+
+// 工作流引擎和任务调度器核心类
+class WorkflowEngine {
+    constructor() {
+        this.workflows = new Map();
+        this.executingWorkflows = new Map();
+        this.workflowHistory = [];
+        this.templates = new Map();
+        this.status = 'idle';
+    }
+
+    async createWorkflow(workflowConfig) {
+        const workflow = {
+            id: this.generateWorkflowId(),
+            name: workflowConfig.name,
+            description: workflowConfig.description,
+            nodes: workflowConfig.nodes || [],
+            edges: workflowConfig.edges || [],
+            variables: workflowConfig.variables || {},
+            triggers: workflowConfig.triggers || [],
+            status: 'created',
+            createdAt: new Date().toISOString(),
+            createdBy: workflowConfig.createdBy || 'system',
+            version: 1
+        };
+
+        this.workflows.set(workflow.id, workflow);
+        await this.saveWorkflow(workflow);
+
+        window.platform.monitoring.logCollector.log('info',
+            `工作流创建成功: ${workflow.name}`, { workflowId: workflow.id });
+
+        return workflow;
+    }
+
+    async executeWorkflow(workflowId, inputData = {}) {
+        const workflow = this.workflows.get(workflowId);
+        if (!workflow) {
+            throw new Error(`工作流不存在: ${workflowId}`);
+        }
+
+        const execution = {
+            id: this.generateExecutionId(),
+            workflowId,
+            status: 'running',
+            startTime: new Date().toISOString(),
+            inputData,
+            currentNode: null,
+            executedNodes: [],
+            results: {},
+            variables: { ...workflow.variables, ...inputData },
+            errors: []
+        };
+
+        this.executingWorkflows.set(execution.id, execution);
+
+        try {
+            await this.runWorkflowExecution(execution);
+            execution.status = 'completed';
+            execution.endTime = new Date().toISOString();
+
+            window.platform.monitoring.logCollector.log('info',
+                `工作流执行完成: ${workflow.name}`, {
+                    executionId: execution.id,
+                    duration: Date.now() - new Date(execution.startTime).getTime()
+                });
+
+        } catch (error) {
+            execution.status = 'failed';
+            execution.endTime = new Date().toISOString();
+            execution.errors.push({
+                message: error.message,
+                timestamp: new Date().toISOString(),
+                node: execution.currentNode
+            });
+
+            window.platform.monitoring.logCollector.log('error',
+                `工作流执行失败: ${workflow.name}`, {
+                    executionId: execution.id,
+                    error: error.message
+                });
+        } finally {
+            this.workflowHistory.push(execution);
+            this.executingWorkflows.delete(execution.id);
+        }
+
+        return execution;
+    }
+
+    async runWorkflowExecution(execution) {
+        const workflow = this.workflows.get(execution.workflowId);
+        const startNodes = workflow.nodes.filter(node => node.type === 'start');
+
+        if (startNodes.length === 0) {
+            throw new Error('工作流没有起始节点');
+        }
+
+        for (const startNode of startNodes) {
+            await this.executeNode(execution, startNode);
+        }
+    }
+
+    async executeNode(execution, node) {
+        execution.currentNode = node.id;
+        execution.executedNodes.push(node.id);
+
+        window.platform.monitoring.logCollector.log('debug',
+            `执行节点: ${node.name}`, {
+                executionId: execution.id,
+                nodeId: node.id
+            });
+
+        try {
+            let result;
+
+            switch (node.type) {
+                case 'start':
+                    result = { status: 'started', data: execution.inputData };
+                    break;
+                case 'agent_task':
+                    result = await this.executeAgentTask(execution, node);
+                    break;
+                case 'condition':
+                    result = await this.evaluateCondition(execution, node);
+                    break;
+                case 'parallel':
+                    result = await this.executeParallelTasks(execution, node);
+                    break;
+                case 'data_transform':
+                    result = await this.transformData(execution, node);
+                    break;
+                case 'webhook':
+                    result = await this.executeWebhook(execution, node);
+                    break;
+                case 'end':
+                    result = { status: 'completed', data: execution.results };
+                    break;
+                default:
+                    throw new Error(`未知节点类型: ${node.type}`);
+            }
+
+            execution.results[node.id] = result;
+
+            // 执行下一个节点
+            if (node.type !== 'end') {
+                const nextNodes = this.getNextNodes(execution.workflowId, node.id, result);
+                for (const nextNode of nextNodes) {
+                    await this.executeNode(execution, nextNode);
+                }
+            }
+
+        } catch (error) {
+            execution.errors.push({
+                nodeId: node.id,
+                message: error.message,
+                timestamp: new Date().toISOString()
+            });
+            throw error;
+        }
+    }
+
+    async executeAgentTask(execution, node) {
+        const agentId = node.config.agentId || this.selectOptimalAgent(node.config.requirements);
+        const agent = window.platform.agents.get(agentId);
+
+        if (!agent) {
+            throw new Error(`智能体不可用: ${agentId}`);
+        }
+
+        const task = {
+            id: window.platform.generateTaskId(),
+            name: node.config.taskName,
+            description: node.config.description,
+            priority: node.config.priority || 'medium',
+            data: this.resolveVariables(node.config.data, execution.variables),
+            agentId
+        };
+
+        return await window.platform.createTask(task);
+    }
+
+    selectOptimalAgent(requirements) {
+        const availableAgents = Array.from(window.platform.agents.values())
+            .filter(agent => agent.status === 'ready');
+
+        // 基于负载、能力匹配等选择最优智能体
+        return availableAgents.sort((a, b) => {
+            const loadA = a.currentTasks?.length || 0;
+            const loadB = b.currentTasks?.length || 0;
+            return loadA - loadB;
+        })[0]?.id;
+    }
+
+    resolveVariables(data, variables) {
+        const resolved = JSON.parse(JSON.stringify(data));
+
+        function resolve(obj) {
+            for (const key in obj) {
+                if (typeof obj[key] === 'string' && obj[key].startsWith('${') && obj[key].endsWith('}')) {
+                    const varName = obj[key].slice(2, -1);
+                    obj[key] = variables[varName] || obj[key];
+                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    resolve(obj[key]);
+                }
+            }
+        }
+
+        resolve(resolved);
+        return resolved;
+    }
+
+    getNextNodes(workflowId, currentNodeId, result) {
+        const workflow = this.workflows.get(workflowId);
+        const nextEdges = workflow.edges.filter(edge => edge.source === currentNodeId);
+
+        const validEdges = nextEdges.filter(edge => {
+            if (!edge.condition) return true;
+            return this.evaluateEdgeCondition(edge.condition, result);
+        });
+
+        return validEdges.map(edge =>
+            workflow.nodes.find(node => node.id === edge.target)
+        );
+    }
+
+    evaluateEdgeCondition(condition, result) {
+        // 简单的条件评估
+        try {
+            return new Function('result', `return ${condition}`)(result);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    generateWorkflowId() {
+        return 'wf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    generateExecutionId() {
+        return 'exec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    async saveWorkflow(workflow) {
+        // 保存到本地存储或发送到后端
+        const workflows = JSON.parse(localStorage.getItem('workflows') || '[]');
+        workflows.push(workflow);
+        localStorage.setItem('workflows', JSON.stringify(workflows));
+    }
+
+    getWorkflows() {
+        return Array.from(this.workflows.values());
+    }
+
+    getWorkflowHistory() {
+        return this.workflowHistory.slice(-100); // 最近100次执行
+    }
+}
+
+class TaskScheduler {
+    constructor() {
+        this.queues = new Map(); // 不同优先级的队列
+        this.runningTasks = new Map();
+        this.completedTasks = [];
+        this.failedTasks = [];
+        this.schedulerConfig = {
+            maxConcurrentTasks: 50,
+            maxTasksPerAgent: 5,
+            schedulingStrategy: 'priority_based', // 'round_robin', 'load_balanced'
+            retryAttempts: 3,
+            retryDelay: 1000
+        };
+        this.isRunning = false;
+    }
+
+    start() {
+        if (this.isRunning) return;
+
+        this.isRunning = true;
+        this.scheduleLoop();
+
+        window.platform.monitoring.logCollector.log('info', '任务调度器启动');
+    }
+
+    stop() {
+        this.isRunning = false;
+        window.platform.monitoring.logCollector.log('info', '任务调度器停止');
+    }
+
+    async scheduleTask(task) {
+        // 分配优先级队列
+        const priority = task.priority || 'medium';
+        if (!this.queues.has(priority)) {
+            this.queues.set(priority, []);
+        }
+
+        // 添加调度元数据
+        const scheduledTask = {
+            ...task,
+            id: task.id || this.generateTaskId(),
+            scheduledAt: new Date().toISOString(),
+            attempts: 0,
+            maxAttempts: task.maxAttempts || this.schedulerConfig.retryAttempts,
+            status: 'queued'
+        };
+
+        this.queues.get(priority).push(scheduledTask);
+
+        window.platform.monitoring.logCollector.log('info',
+            `任务已加入队列: ${scheduledTask.name}`, {
+                taskId: scheduledTask.id,
+                priority: priority
+            });
+
+        return scheduledTask;
+    }
+
+    async scheduleLoop() {
+        while (this.isRunning) {
+            try {
+                await this.processQueues();
+                await this.checkRunningTasks();
+                await this.sleep(1000); // 每秒检查一次
+            } catch (error) {
+                window.platform.monitoring.logCollector.log('error',
+                    '调度循环错误', { error: error.message });
+            }
+        }
+    }
+
+    async processQueues() {
+        const priorityOrder = ['critical', 'high', 'medium', 'low'];
+
+        for (const priority of priorityOrder) {
+            const queue = this.queues.get(priority) || [];
+
+            while (queue.length > 0 && this.canExecuteMoreTasks()) {
+                const task = queue.shift();
+                await this.executeTask(task);
+            }
+        }
+    }
+
+    canExecuteMoreTasks() {
+        return this.runningTasks.size < this.schedulerConfig.maxConcurrentTasks;
+    }
+
+    async executeTask(task) {
+        try {
+            task.status = 'running';
+            task.startTime = new Date().toISOString();
+            this.runningTasks.set(task.id, task);
+
+            // 选择智能体
+            const agent = await this.selectAgent(task);
+            if (!agent) {
+                throw new Error('没有可用的智能体');
+            }
+
+            task.assignedAgent = agent.id;
+
+            window.platform.monitoring.logCollector.log('info',
+                `开始执行任务: ${task.name}`, {
+                    taskId: task.id,
+                    agentId: agent.id
+                });
+
+            // 执行任务
+            const result = await this.runTask(task, agent);
+
+            task.status = 'completed';
+            task.endTime = new Date().toISOString();
+            task.result = result;
+
+            this.runningTasks.delete(task.id);
+            this.completedTasks.push(task);
+
+            window.platform.monitoring.logCollector.log('info',
+                `任务执行完成: ${task.name}`, {
+                    taskId: task.id,
+                    duration: Date.now() - new Date(task.startTime).getTime()
+                });
+
+        } catch (error) {
+            await this.handleTaskFailure(task, error);
+        }
+    }
+
+    async selectAgent(task) {
+        const availableAgents = Array.from(window.platform.agents.values())
+            .filter(agent => {
+                const isReady = agent.status === 'ready';
+                const hasCapacity = (agent.currentTasks?.length || 0) < this.schedulerConfig.maxTasksPerAgent;
+                const hasRequiredCapabilities = task.requiredCapabilities?.every(cap =>
+                    agent.capabilities?.includes(cap)) || true;
+
+                return isReady && hasCapacity && hasRequiredCapabilities;
+            });
+
+        if (availableAgents.length === 0) {
+            return null;
+        }
+
+        // 负载均衡选择
+        return availableAgents.sort((a, b) => {
+            const loadA = a.currentTasks?.length || 0;
+            const loadB = b.currentTasks?.length || 0;
+            return loadA - loadB;
+        })[0];
+    }
+
+    async runTask(task, agent) {
+        // 模拟任务执行
+        const executionTime = Math.random() * 3000 + 1000; // 1-4秒
+
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (Math.random() > 0.1) { // 90% 成功率
+                    resolve({
+                        status: 'success',
+                        data: `任务 ${task.name} 执行结果`,
+                        executionTime,
+                        processedAt: new Date().toISOString()
+                    });
+                } else {
+                    reject(new Error('任务执行失败'));
+                }
+            }, executionTime);
+        });
+    }
+
+    async handleTaskFailure(task, error) {
+        task.attempts++;
+        task.status = 'failed';
+        task.error = error.message;
+        task.endTime = new Date().toISOString();
+
+        this.runningTasks.delete(task.id);
+
+        window.platform.monitoring.logCollector.log('error',
+            `任务执行失败: ${task.name}`, {
+                taskId: task.id,
+                error: error.message,
+                attempt: task.attempts
+            });
+
+        // 重试逻辑
+        if (task.attempts < task.maxAttempts) {
+            setTimeout(() => {
+                task.status = 'retrying';
+                this.scheduleTask(task);
+            }, this.schedulerConfig.retryDelay * task.attempts);
+        } else {
+            this.failedTasks.push(task);
+
+            window.platform.monitoring.logCollector.log('error',
+                `任务最终失败: ${task.name}`, {
+                    taskId: task.id,
+                    totalAttempts: task.attempts
+                });
+        }
+    }
+
+    async checkRunningTasks() {
+        const timeout = 300000; // 5分钟超时
+        const now = Date.now();
+
+        for (const [taskId, task] of this.runningTasks) {
+            const runTime = now - new Date(task.startTime).getTime();
+
+            if (runTime > timeout) {
+                const error = new Error('任务执行超时');
+                await this.handleTaskFailure(task, error);
+            }
+        }
+    }
+
+    generateTaskId() {
+        return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    getQueueStatus() {
+        return {
+            queues: Object.fromEntries(
+                Array.from(this.queues.entries()).map(([priority, queue]) => [
+                    priority,
+                    { count: queue.length, tasks: queue.slice(0, 10) }
+                ])
+            ),
+            running: this.runningTasks.size,
+            completed: this.completedTasks.length,
+            failed: this.failedTasks.length
+        };
+    }
+
+    getTaskStats() {
+        const completed = this.completedTasks.length;
+        const failed = this.failedTasks.length;
+        const total = completed + failed;
+
+        return {
+            total,
+            completed,
+            failed,
+            successRate: total > 0 ? (completed / total) * 100 : 100,
+            averageExecutionTime: this.getAverageExecutionTime()
+        };
+    }
+
+    getAverageExecutionTime() {
+        const recentTasks = this.completedTasks.slice(-100);
+        if (recentTasks.length === 0) return 0;
+
+        const totalTime = recentTasks.reduce((sum, task) => {
+            const executionTime = new Date(task.endTime).getTime() - new Date(task.startTime).getTime();
+            return sum + executionTime;
+        }, 0);
+
+        return totalTime / recentTasks.length;
+    }
+}
+
+class ExecutionEngine {
+    constructor() {
+        this.executors = new Map();
+        this.executionHistory = [];
+        this.resourcePool = new ResourcePool();
+        this.status = 'idle';
+    }
+
+    async executeWorkflow(workflow, context = {}) {
+        const execution = {
+            id: this.generateExecutionId(),
+            workflowId: workflow.id,
+            startTime: new Date().toISOString(),
+            context,
+            status: 'running',
+            steps: [],
+            results: {}
+        };
+
+        try {
+            this.status = 'running';
+
+            window.platform.monitoring.logCollector.log('info',
+                `开始执行工作流: ${workflow.name}`, { executionId: execution.id });
+
+            for (const step of workflow.steps || []) {
+                const stepResult = await this.executeStep(step, execution);
+                execution.steps.push(stepResult);
+                execution.results[step.id] = stepResult;
+            }
+
+            execution.status = 'completed';
+            execution.endTime = new Date().toISOString();
+
+            window.platform.monitoring.logCollector.log('info',
+                `工作流执行完成: ${workflow.name}`, {
+                    executionId: execution.id,
+                    duration: Date.now() - new Date(execution.startTime).getTime()
+                });
+
+        } catch (error) {
+            execution.status = 'failed';
+            execution.error = error.message;
+            execution.endTime = new Date().toISOString();
+
+            window.platform.monitoring.logCollector.log('error',
+                `工作流执行失败: ${workflow.name}`, {
+                    executionId: execution.id,
+                    error: error.message
+                });
+        } finally {
+            this.executionHistory.push(execution);
+            this.status = 'idle';
+        }
+
+        return execution;
+    }
+
+    async executeStep(step, execution) {
+        const stepExecution = {
+            id: step.id,
+            name: step.name,
+            type: step.type,
+            startTime: new Date().toISOString(),
+            status: 'running'
+        };
+
+        try {
+            let result;
+
+            switch (step.type) {
+                case 'api_call':
+                    result = await this.executeAPICall(step);
+                    break;
+                case 'data_processing':
+                    result = await this.executeDataProcessing(step, execution.context);
+                    break;
+                case 'agent_coordination':
+                    result = await this.executeAgentCoordination(step);
+                    break;
+                case 'condition_check':
+                    result = await this.executeConditionCheck(step, execution.context);
+                    break;
+                default:
+                    throw new Error(`未知步骤类型: ${step.type}`);
+            }
+
+            stepExecution.status = 'completed';
+            stepExecution.result = result;
+            stepExecution.endTime = new Date().toISOString();
+
+        } catch (error) {
+            stepExecution.status = 'failed';
+            stepExecution.error = error.message;
+            stepExecution.endTime = new Date().toISOString();
+            throw error;
+        }
+
+        return stepExecution;
+    }
+
+    generateExecutionId() {
+        return 'exec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+}
+
+class ResourcePool {
+    constructor() {
+        this.resources = new Map();
+        this.allocations = new Map();
+        this.limits = {
+            cpu: 100,
+            memory: 1000, // MB
+            network: 1000 // Mbps
+        };
+    }
+
+    allocateResource(type, amount, requestId) {
+        const current = this.getCurrentUsage(type);
+        if (current + amount > this.limits[type]) {
+            throw new Error(`资源不足: ${type}`);
+        }
+
+        this.allocations.set(requestId, { type, amount, allocatedAt: Date.now() });
+        return true;
+    }
+
+    releaseResource(requestId) {
+        this.allocations.delete(requestId);
+    }
+
+    getCurrentUsage(type) {
+        return Array.from(this.allocations.values())
+            .filter(alloc => alloc.type === type)
+            .reduce((sum, alloc) => sum + alloc.amount, 0);
+    }
+}
+
+// 企业级安全和权限管理系统
+class AuthenticationManager {
+    constructor() {
+        this.sessions = new Map();
+        this.tokens = new Map();
+        this.config = {
+            tokenExpiry: 3600000, // 1小时
+            refreshTokenExpiry: 604800000, // 7天
+            maxLoginAttempts: 5,
+            lockoutDuration: 900000, // 15分钟
+            passwordMinLength: 8,
+            requireMFA: true
+        };
+        this.failedAttempts = new Map();
+        this.lockedAccounts = new Map();
+    }
+
+    async authenticate(credentials) {
+        const { username, password, mfaCode } = credentials;
+
+        // 检查账户锁定
+        if (this.isAccountLocked(username)) {
+            throw new Error('账户已被锁定，请稍后再试');
+        }
+
+        try {
+            // 验证用户凭据
+            const user = await this.validateCredentials(username, password);
+            if (!user) {
+                await this.recordFailedAttempt(username);
+                throw new Error('用户名或密码错误');
+            }
+
+            // 多因素认证
+            if (this.config.requireMFA && !await this.validateMFA(user, mfaCode)) {
+                throw new Error('多因素认证失败');
+            }
+
+            // 清除失败尝试记录
+            this.failedAttempts.delete(username);
+
+            // 生成访问令牌
+            const accessToken = await this.generateAccessToken(user);
+            const refreshToken = await this.generateRefreshToken(user);
+
+            // 创建会话
+            const session = await this.createSession(user, accessToken);
+
+            window.platform.monitoring.logCollector.log('info',
+                `用户登录成功: ${username}`, { userId: user.id });
+
+            return {
+                user,
+                accessToken,
+                refreshToken,
+                session,
+                expiresAt: new Date(Date.now() + this.config.tokenExpiry).toISOString()
+            };
+
+        } catch (error) {
+            window.platform.monitoring.logCollector.log('warn',
+                `登录失败: ${username}`, { error: error.message });
+            throw error;
+        }
+    }
+
+    async validateCredentials(username, password) {
+        // 实际环境中应该查询数据库
+        const users = this.loadUsers();
+        const user = users.find(u => u.username === username);
+
+        if (!user) return null;
+
+        // 验证密码哈希
+        const isValid = await this.verifyPassword(password, user.passwordHash);
+        return isValid ? user : null;
+    }
+
+    async verifyPassword(password, hash) {
+        // 实际环境中使用 bcrypt 或类似库
+        const crypto = window.crypto || window.msCrypto;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        return hashHex === hash;
+    }
+
+    async validateMFA(user, code) {
+        if (!code) return false;
+
+        // 实际环境中验证 TOTP 或 SMS 验证码
+        const validCodes = ['123456', '000000']; // 演示用
+        return validCodes.includes(code);
+    }
+
+    async generateAccessToken(user) {
+        const payload = {
+            userId: user.id,
+            username: user.username,
+            roles: user.roles,
+            permissions: user.permissions,
+            iat: Date.now(),
+            exp: Date.now() + this.config.tokenExpiry
+        };
+
+        // 实际环境中使用 JWT
+        const token = btoa(JSON.stringify(payload));
+        this.tokens.set(token, payload);
+
+        return token;
+    }
+
+    async generateRefreshToken(user) {
+        const payload = {
+            userId: user.id,
+            type: 'refresh',
+            iat: Date.now(),
+            exp: Date.now() + this.config.refreshTokenExpiry
+        };
+
+        const token = btoa(JSON.stringify(payload));
+        return token;
+    }
+
+    async createSession(user, accessToken) {
+        const session = {
+            id: this.generateSessionId(),
+            userId: user.id,
+            accessToken,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            ipAddress: this.getClientIP(),
+            userAgent: navigator.userAgent,
+            status: 'active'
+        };
+
+        this.sessions.set(session.id, session);
+        return session;
+    }
+
+    async validateToken(token) {
+        const payload = this.tokens.get(token);
+        if (!payload) {
+            throw new Error('无效的访问令牌');
+        }
+
+        if (Date.now() > payload.exp) {
+            this.tokens.delete(token);
+            throw new Error('访问令牌已过期');
+        }
+
+        return payload;
+    }
+
+    async refreshAccessToken(refreshToken) {
+        try {
+            const payload = JSON.parse(atob(refreshToken));
+
+            if (payload.type !== 'refresh' || Date.now() > payload.exp) {
+                throw new Error('刷新令牌无效或已过期');
+            }
+
+            const user = this.loadUsers().find(u => u.id === payload.userId);
+            if (!user) {
+                throw new Error('用户不存在');
+            }
+
+            const newAccessToken = await this.generateAccessToken(user);
+            return newAccessToken;
+
+        } catch (error) {
+            throw new Error('刷新令牌失败');
+        }
+    }
+
+    isAccountLocked(username) {
+        const lockInfo = this.lockedAccounts.get(username);
+        if (!lockInfo) return false;
+
+        if (Date.now() > lockInfo.unlockAt) {
+            this.lockedAccounts.delete(username);
+            return false;
+        }
+
+        return true;
+    }
+
+    async recordFailedAttempt(username) {
+        const attempts = this.failedAttempts.get(username) || 0;
+        const newAttempts = attempts + 1;
+
+        this.failedAttempts.set(username, newAttempts);
+
+        if (newAttempts >= this.config.maxLoginAttempts) {
+            this.lockedAccounts.set(username, {
+                lockedAt: Date.now(),
+                unlockAt: Date.now() + this.config.lockoutDuration
+            });
+
+            window.platform.monitoring.logCollector.log('warn',
+                `账户被锁定: ${username}`, { attempts: newAttempts });
+        }
+    }
+
+    generateSessionId() {
+        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    getClientIP() {
+        // 实际环境中从请求头获取
+        return '127.0.0.1';
+    }
+
+    loadUsers() {
+        // 实际环境中从数据库加载
+        return [
+            {
+                id: 'user_1',
+                username: 'admin',
+                passwordHash: 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', // 'secret123'
+                roles: ['admin'],
+                permissions: ['*'],
+                email: 'admin@company.com',
+                mfaEnabled: true
+            },
+            {
+                id: 'user_2',
+                username: 'operator',
+                passwordHash: 'password_hash_here',
+                roles: ['operator'],
+                permissions: ['agents.read', 'tasks.read', 'tasks.create'],
+                email: 'operator@company.com',
+                mfaEnabled: false
+            }
+        ];
+    }
+
+    async logout(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (session) {
+            session.status = 'ended';
+            session.endedAt = new Date().toISOString();
+            this.tokens.delete(session.accessToken);
+
+            window.platform.monitoring.logCollector.log('info',
+                `用户登出: ${session.userId}`, { sessionId });
+        }
+    }
+}
+
+class AuthorizationManager {
+    constructor() {
+        this.roles = new Map();
+        this.permissions = new Map();
+        this.policies = new Map();
+
+        this.initializeRBAC();
+    }
+
+    initializeRBAC() {
+        // 定义权限
+        const permissions = [
+            { id: 'agents.create', name: '创建智能体', category: 'agents' },
+            { id: 'agents.read', name: '查看智能体', category: 'agents' },
+            { id: 'agents.update', name: '更新智能体', category: 'agents' },
+            { id: 'agents.delete', name: '删除智能体', category: 'agents' },
+            { id: 'agents.control', name: '控制智能体', category: 'agents' },
+
+            { id: 'tasks.create', name: '创建任务', category: 'tasks' },
+            { id: 'tasks.read', name: '查看任务', category: 'tasks' },
+            { id: 'tasks.update', name: '更新任务', category: 'tasks' },
+            { id: 'tasks.delete', name: '删除任务', category: 'tasks' },
+            { id: 'tasks.execute', name: '执行任务', category: 'tasks' },
+
+            { id: 'workflows.create', name: '创建工作流', category: 'workflows' },
+            { id: 'workflows.read', name: '查看工作流', category: 'workflows' },
+            { id: 'workflows.update', name: '更新工作流', category: 'workflows' },
+            { id: 'workflows.delete', name: '删除工作流', category: 'workflows' },
+            { id: 'workflows.execute', name: '执行工作流', category: 'workflows' },
+
+            { id: 'system.monitor', name: '系统监控', category: 'system' },
+            { id: 'system.configure', name: '系统配置', category: 'system' },
+            { id: 'system.admin', name: '系统管理', category: 'system' },
+
+            { id: 'users.create', name: '创建用户', category: 'users' },
+            { id: 'users.read', name: '查看用户', category: 'users' },
+            { id: 'users.update', name: '更新用户', category: 'users' },
+            { id: 'users.delete', name: '删除用户', category: 'users' }
+        ];
+
+        permissions.forEach(permission => {
+            this.permissions.set(permission.id, permission);
+        });
+
+        // 定义角色
+        const roles = [
+            {
+                id: 'admin',
+                name: '系统管理员',
+                description: '拥有系统所有权限',
+                permissions: ['*']
+            },
+            {
+                id: 'operator',
+                name: '操作员',
+                description: '日常操作权限',
+                permissions: [
+                    'agents.read', 'agents.create', 'agents.update', 'agents.control',
+                    'tasks.read', 'tasks.create', 'tasks.update', 'tasks.execute',
+                    'workflows.read', 'workflows.create', 'workflows.execute',
+                    'system.monitor'
+                ]
+            },
+            {
+                id: 'viewer',
+                name: '查看者',
+                description: '只读权限',
+                permissions: [
+                    'agents.read', 'tasks.read', 'workflows.read', 'system.monitor'
+                ]
+            },
+            {
+                id: 'developer',
+                name: '开发者',
+                description: '开发和测试权限',
+                permissions: [
+                    'agents.read', 'agents.create', 'agents.update',
+                    'tasks.read', 'tasks.create', 'tasks.update',
+                    'workflows.read', 'workflows.create', 'workflows.update', 'workflows.execute'
+                ]
+            }
+        ];
+
+        roles.forEach(role => {
+            this.roles.set(role.id, role);
+        });
+    }
+
+    hasPermission(user, permission, resource = null) {
+        // 管理员拥有所有权限
+        if (user.roles?.includes('admin') || user.permissions?.includes('*')) {
+            return true;
+        }
+
+        // 检查直接权限
+        if (user.permissions?.includes(permission)) {
+            return true;
+        }
+
+        // 检查角色权限
+        for (const roleId of user.roles || []) {
+            const role = this.roles.get(roleId);
+            if (role?.permissions.includes(permission) || role?.permissions.includes('*')) {
+                return true;
+            }
+        }
+
+        // 检查资源级别权限
+        if (resource) {
+            return this.checkResourcePermission(user, permission, resource);
+        }
+
+        return false;
+    }
+
+    checkResourcePermission(user, permission, resource) {
+        // 实现基于资源的访问控制 (RBAC)
+        const resourceOwner = resource.createdBy || resource.ownerId;
+
+        // 资源拥有者拥有完全权限
+        if (resourceOwner === user.id) {
+            return true;
+        }
+
+        // 检查组权限
+        if (resource.groupId && user.groups?.includes(resource.groupId)) {
+            const groupPermissions = this.getGroupPermissions(resource.groupId);
+            return groupPermissions.includes(permission);
+        }
+
+        return false;
+    }
+
+    getGroupPermissions(groupId) {
+        // 实际环境中从数据库获取
+        const groupPermissions = {
+            'group_1': ['agents.read', 'tasks.read', 'workflows.read'],
+            'group_2': ['agents.read', 'agents.create', 'tasks.read', 'tasks.create']
+        };
+
+        return groupPermissions[groupId] || [];
+    }
+
+    enforcePermission(user, permission, resource = null) {
+        if (!this.hasPermission(user, permission, resource)) {
+            const error = new Error(`权限不足: ${permission}`);
+            error.code = 'INSUFFICIENT_PERMISSIONS';
+
+            window.platform.security.auditLogger.logSecurityEvent({
+                type: 'PERMISSION_DENIED',
+                userId: user.id,
+                permission,
+                resource: resource?.id,
+                timestamp: new Date().toISOString()
+            });
+
+            throw error;
+        }
+
+        // 记录权限使用
+        window.platform.security.auditLogger.logSecurityEvent({
+            type: 'PERMISSION_GRANTED',
+            userId: user.id,
+            permission,
+            resource: resource?.id,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    getUserPermissions(user) {
+        let permissions = new Set(user.permissions || []);
+
+        // 添加角色权限
+        for (const roleId of user.roles || []) {
+            const role = this.roles.get(roleId);
+            if (role) {
+                role.permissions.forEach(p => permissions.add(p));
+            }
+        }
+
+        return Array.from(permissions);
+    }
+
+    createPolicy(policyConfig) {
+        const policy = {
+            id: this.generatePolicyId(),
+            name: policyConfig.name,
+            description: policyConfig.description,
+            rules: policyConfig.rules,
+            effect: policyConfig.effect || 'allow',
+            conditions: policyConfig.conditions || [],
+            createdAt: new Date().toISOString()
+        };
+
+        this.policies.set(policy.id, policy);
+        return policy;
+    }
+
+    evaluatePolicy(policy, context) {
+        for (const rule of policy.rules) {
+            if (this.evaluateRule(rule, context)) {
+                return policy.effect === 'allow';
+            }
+        }
+        return false;
+    }
+
+    evaluateRule(rule, context) {
+        // 简单的规则评估器
+        try {
+            return new Function('context', `return ${rule.condition}`)(context);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    generatePolicyId() {
+        return 'policy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+}
+
+class EncryptionService {
+    constructor() {
+        this.algorithm = 'AES-GCM';
+        this.keyLength = 256;
+        this.ivLength = 12;
+        this.keys = new Map();
+    }
+
+    async generateKey() {
+        const key = await window.crypto.subtle.generateKey(
+            {
+                name: this.algorithm,
+                length: this.keyLength
+            },
+            true,
+            ['encrypt', 'decrypt']
+        );
+        return key;
+    }
+
+    async encrypt(data, keyId = 'default') {
+        const key = this.keys.get(keyId) || await this.generateKey();
+        if (!this.keys.has(keyId)) {
+            this.keys.set(keyId, key);
+        }
+
+        const iv = window.crypto.getRandomValues(new Uint8Array(this.ivLength));
+        const encoder = new TextEncoder();
+        const encodedData = encoder.encode(JSON.stringify(data));
+
+        const encrypted = await window.crypto.subtle.encrypt(
+            {
+                name: this.algorithm,
+                iv: iv
+            },
+            key,
+            encodedData
+        );
+
+        return {
+            data: Array.from(new Uint8Array(encrypted)),
+            iv: Array.from(iv),
+            keyId
+        };
+    }
+
+    async decrypt(encryptedData, keyId = 'default') {
+        const key = this.keys.get(keyId);
+        if (!key) {
+            throw new Error('加密密钥不存在');
+        }
+
+        const data = new Uint8Array(encryptedData.data);
+        const iv = new Uint8Array(encryptedData.iv);
+
+        const decrypted = await window.crypto.subtle.decrypt(
+            {
+                name: this.algorithm,
+                iv: iv
+            },
+            key,
+            data
+        );
+
+        const decoder = new TextDecoder();
+        const decryptedString = decoder.decode(decrypted);
+        return JSON.parse(decryptedString);
+    }
+
+    async hashPassword(password, salt = null) {
+        if (!salt) {
+            salt = window.crypto.getRandomValues(new Uint8Array(16));
+        }
+
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password + Array.from(salt).join(''));
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        return {
+            hash: hashHex,
+            salt: Array.from(salt)
+        };
+    }
+
+    generateSecureToken(length = 32) {
+        const array = new Uint8Array(length);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+}
+
+class AuditLogger {
+    constructor() {
+        this.logs = [];
+        this.maxLogs = 10000;
+        this.categories = ['security', 'access', 'data', 'system', 'compliance'];
+    }
+
+    logSecurityEvent(event) {
+        const logEntry = {
+            id: this.generateLogId(),
+            timestamp: new Date().toISOString(),
+            category: 'security',
+            type: event.type,
+            userId: event.userId,
+            sessionId: event.sessionId,
+            ipAddress: event.ipAddress || this.getClientIP(),
+            userAgent: event.userAgent || navigator.userAgent,
+            resource: event.resource,
+            action: event.action,
+            result: event.result,
+            details: event.details,
+            severity: event.severity || 'info'
+        };
+
+        this.addLog(logEntry);
+
+        // 重要安全事件实时告警
+        if (['AUTHENTICATION_FAILED', 'PERMISSION_DENIED', 'SUSPICIOUS_ACTIVITY'].includes(event.type)) {
+            this.triggerSecurityAlert(logEntry);
+        }
+    }
+
+    logDataAccess(event) {
+        const logEntry = {
+            id: this.generateLogId(),
+            timestamp: new Date().toISOString(),
+            category: 'data',
+            type: 'DATA_ACCESS',
+            userId: event.userId,
+            resource: event.resource,
+            action: event.action,
+            dataType: event.dataType,
+            recordCount: event.recordCount,
+            query: event.query,
+            result: event.result
+        };
+
+        this.addLog(logEntry);
+    }
+
+    logSystemEvent(event) {
+        const logEntry = {
+            id: this.generateLogId(),
+            timestamp: new Date().toISOString(),
+            category: 'system',
+            type: event.type,
+            component: event.component,
+            action: event.action,
+            details: event.details,
+            severity: event.severity || 'info'
+        };
+
+        this.addLog(logEntry);
+    }
+
+    addLog(logEntry) {
+        this.logs.push(logEntry);
+
+        // 限制内存中的日志数量
+        if (this.logs.length > this.maxLogs) {
+            this.logs.shift();
+        }
+
+        // 发送到外部日志系统
+        this.sendToExternalLogger(logEntry);
+
+        // 触发日志事件
+        window.dispatchEvent(new CustomEvent('auditLog', { detail: logEntry }));
+    }
+
+    async sendToExternalLogger(logEntry) {
+        try {
+            // 实际环境中发送到 Elasticsearch、Splunk 等
+            if (window.platform?.monitoring?.elasticsearch) {
+                await window.platform.monitoring.elasticsearch.index({
+                    index: `audit-logs-${new Date().toISOString().split('T')[0]}`,
+                    body: logEntry
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send audit log to external system:', error);
+        }
+    }
+
+    triggerSecurityAlert(logEntry) {
+        const alert = {
+            id: this.generateAlertId(),
+            type: 'SECURITY_ALERT',
+            severity: 'high',
+            message: `安全事件: ${logEntry.type}`,
+            source: logEntry,
+            timestamp: new Date().toISOString()
+        };
+
+        window.dispatchEvent(new CustomEvent('securityAlert', { detail: alert }));
+
+        // 实际环境中发送通知
+        this.sendSecurityNotification(alert);
+    }
+
+    async sendSecurityNotification(alert) {
+        // 发送邮件、短信、Slack 通知等
+        console.warn('Security Alert:', alert);
+    }
+
+    getAuditLogs(filters = {}) {
+        let filteredLogs = [...this.logs];
+
+        if (filters.category) {
+            filteredLogs = filteredLogs.filter(log => log.category === filters.category);
+        }
+
+        if (filters.type) {
+            filteredLogs = filteredLogs.filter(log => log.type === filters.type);
+        }
+
+        if (filters.userId) {
+            filteredLogs = filteredLogs.filter(log => log.userId === filters.userId);
+        }
+
+        if (filters.startTime) {
+            filteredLogs = filteredLogs.filter(log =>
+                new Date(log.timestamp) >= new Date(filters.startTime)
+            );
+        }
+
+        if (filters.endTime) {
+            filteredLogs = filteredLogs.filter(log =>
+                new Date(log.timestamp) <= new Date(filters.endTime)
+            );
+        }
+
+        return filteredLogs.slice(-1000); // 最多返回1000条
+    }
+
+    generateLogId() {
+        return 'audit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    generateAlertId() {
+        return 'alert_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    getClientIP() {
+        return '127.0.0.1'; // 实际环境中从请求头获取
+    }
+}
+
+class SessionManager {
+    constructor() {
+        this.sessions = new Map();
+        this.config = {
+            maxConcurrentSessions: 5,
+            sessionTimeout: 3600000, // 1小时
+            extendOnActivity: true,
+            trackLocation: true
+        };
+    }
+
+    createSession(user, authToken) {
+        const session = {
+            id: this.generateSessionId(),
+            userId: user.id,
+            authToken,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            ipAddress: this.getClientIP(),
+            userAgent: navigator.userAgent,
+            location: this.getLocation(),
+            status: 'active',
+            activities: []
+        };
+
+        this.sessions.set(session.id, session);
+        this.enforceSessionLimits(user.id);
+
+        return session;
+    }
+
+    updateActivity(sessionId, activity) {
+        const session = this.sessions.get(sessionId);
+        if (!session) return false;
+
+        session.lastActivity = new Date().toISOString();
+        session.activities.push({
+            type: activity.type,
+            timestamp: new Date().toISOString(),
+            details: activity.details
+        });
+
+        // 保持最近100个活动
+        if (session.activities.length > 100) {
+            session.activities.shift();
+        }
+
+        // 自动延长会话
+        if (this.config.extendOnActivity) {
+            session.expiresAt = new Date(Date.now() + this.config.sessionTimeout).toISOString();
+        }
+
+        return true;
+    }
+
+    validateSession(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+            throw new Error('会话不存在');
+        }
+
+        if (session.status !== 'active') {
+            throw new Error('会话已失效');
+        }
+
+        if (session.expiresAt && new Date() > new Date(session.expiresAt)) {
+            this.terminateSession(sessionId, 'expired');
+            throw new Error('会话已过期');
+        }
+
+        return session;
+    }
+
+    terminateSession(sessionId, reason = 'manual') {
+        const session = this.sessions.get(sessionId);
+        if (session) {
+            session.status = 'terminated';
+            session.terminatedAt = new Date().toISOString();
+            session.terminationReason = reason;
+
+            window.platform.security.auditLogger.logSecurityEvent({
+                type: 'SESSION_TERMINATED',
+                userId: session.userId,
+                sessionId,
+                details: { reason }
+            });
+        }
+    }
+
+    enforceSessionLimits(userId) {
+        const userSessions = Array.from(this.sessions.values())
+            .filter(s => s.userId === userId && s.status === 'active');
+
+        if (userSessions.length > this.config.maxConcurrentSessions) {
+            // 终止最老的会话
+            const oldestSession = userSessions.sort((a, b) =>
+                new Date(a.createdAt) - new Date(b.createdAt)
+            )[0];
+
+            this.terminateSession(oldestSession.id, 'session_limit_exceeded');
+        }
+    }
+
+    getUserSessions(userId) {
+        return Array.from(this.sessions.values())
+            .filter(s => s.userId === userId);
+    }
+
+    generateSessionId() {
+        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    getClientIP() {
+        return '127.0.0.1'; // 实际环境中获取真实IP
+    }
+
+    getLocation() {
+        // 实际环境中根据IP获取地理位置
+        return { country: 'CN', city: 'Beijing' };
+    }
+}
+
 // 初始化平台
-const platform = new MultiAgentPlatform();
+document.addEventListener('DOMContentLoaded', () => {
+    window.platform = new MultiAgentPlatform();
+});
+
+// 页面卸载时清理
+window.addEventListener('beforeunload', () => {
+    if (window.platform) {
+        window.platform.destroy?.();
+    }
+});
