@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多智能体DSL框架 - 企业级管理平台</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 侧边栏导航 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-brain"></i>
+                <span>智能体平台</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <h3>控制台</h3>
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>仪表板</span>
+                </a>
+                <a href="#agents" class="nav-item" data-section="agents">
+                    <i class="fas fa-robot"></i>
+                    <span>智能体管理</span>
+                </a>
+                <a href="#tasks" class="nav-item" data-section="tasks">
+                    <i class="fas fa-tasks"></i>
+                    <span>任务调度</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <h3>开发工具</h3>
+                <a href="#dsl-editor" class="nav-item" data-section="dsl-editor">
+                    <i class="fas fa-code"></i>
+                    <span>DSL编辑器</span>
+                </a>
+                <a href="#api-console" class="nav-item" data-section="api-console">
+                    <i class="fas fa-terminal"></i>
+                    <span>API控制台</span>
+                </a>
+                <a href="#workflow" class="nav-item" data-section="workflow">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>工作流设计</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <h3>监控分析</h3>
+                <a href="#monitoring" class="nav-item" data-section="monitoring">
+                    <i class="fas fa-chart-line"></i>
+                    <span>实时监控</span>
+                </a>
+                <a href="#logs" class="nav-item" data-section="logs">
+                    <i class="fas fa-file-alt"></i>
+                    <span>日志分析</span>
+                </a>
+                <a href="#performance" class="nav-item" data-section="performance">
+                    <i class="fas fa-cogs"></i>
+                    <span>性能优化</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <!-- 顶部工具栏 -->
+        <header class="toolbar">
+            <div class="toolbar-left">
+                <button class="btn-icon" id="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="breadcrumb">
+                    <span id="current-section">仪表板</span>
+                </div>
+            </div>
+
+            <div class="toolbar-right">
+                <div class="system-status">
+                    <span class="status-indicator online"></span>
+                    <span>系统在线</span>
+                </div>
+                <button class="btn-icon notification-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+                <div class="user-menu">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=667eea&color=fff" alt="用户头像" class="avatar">
+                    <span>管理员</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- 仪表板页面 -->
+        <section id="dashboard" class="content-section active">
+            <div class="dashboard-grid">
+                <!-- 统计卡片 -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon agents">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="active-agents">24</h3>
+                            <p>活跃智能体</p>
+                            <small class="stat-change positive">+3 今日新增</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon tasks">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="running-tasks">156</h3>
+                            <p>运行中任务</p>
+                            <small class="stat-change positive">98.7% 成功率</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon performance">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="throughput">2.3K</h3>
+                            <p>任务吞吐量/小时</p>
+                            <small class="stat-change positive">+15.2% 本周</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon resources">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="resource-usage">67%</h3>
+                            <p>资源使用率</p>
+                            <small class="stat-change neutral">正常范围</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实时图表区域 -->
+                <div class="charts-row">
+                    <div class="chart-container">
+                        <h3>系统性能监控</h3>
+                        <canvas id="performance-chart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>智能体状态分布</h3>
+                        <canvas id="agent-status-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 活动列表 -->
+                <div class="activity-panel">
+                    <h3>实时活动</h3>
+                    <div class="activity-list" id="activity-list">
+                        <!-- 活动项会通过JavaScript动态添加 -->
+                    </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="quick-actions">
+                    <h3>快速操作</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn primary" onclick="createNewAgent()">
+                            <i class="fas fa-plus"></i>
+                            <span>创建智能体</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="deployWorkflow()">
+                            <i class="fas fa-rocket"></i>
+                            <span>部署工作流</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="runDiagnostic()">
+                            <i class="fas fa-stethoscope"></i>
+                            <span>系统诊断</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 智能体管理页面 -->
+        <section id="agents" class="content-section">
+            <div class="page-header">
+                <h2>智能体管理</h2>
+                <div class="page-actions">
+                    <button class="btn primary" onclick="createNewAgent()">
+                        <i class="fas fa-plus"></i>
+                        创建智能体
+                    </button>
+                    <button class="btn secondary" onclick="importAgents()">
+                        <i class="fas fa-upload"></i>
+                        批量导入
+                    </button>
+                </div>
+            </div>
+
+            <div class="agents-grid" id="agents-grid">
+                <!-- 智能体卡片会通过JavaScript动态生成 -->
+            </div>
+        </section>
+
+        <!-- DSL编辑器页面 -->
+        <section id="dsl-editor" class="content-section">
+            <div class="editor-layout">
+                <div class="editor-toolbar">
+                    <div class="toolbar-group">
+                        <button class="btn primary" onclick="runDSLCode()">
+                            <i class="fas fa-play"></i>
+                            运行
+                        </button>
+                        <button class="btn secondary" onclick="saveDSLCode()">
+                            <i class="fas fa-save"></i>
+                            保存
+                        </button>
+                        <button class="btn secondary" onclick="loadTemplate()">
+                            <i class="fas fa-file-code"></i>
+                            模板
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <select id="template-selector" onchange="loadSelectedTemplate()">
+                            <option value="">选择模板...</option>
+                            <option value="task-scheduling">任务调度模板</option>
+                            <option value="data-processing">数据处理模板</option>
+                            <option value="workflow-orchestration">工作流编排模板</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="editor-container">
+                    <div class="editor-panel">
+                        <div id="monaco-editor"></div>
+                    </div>
+
+                    <div class="output-panel">
+                        <div class="panel-tabs">
+                            <button class="tab-btn active" data-tab="output">执行输出</button>
+                            <button class="tab-btn" data-tab="logs">运行日志</button>
+                            <button class="tab-btn" data-tab="errors">错误信息</button>
+                        </div>
+
+                        <div class="tab-content">
+                            <div id="output-content" class="tab-panel active"></div>
+                            <div id="logs-content" class="tab-panel"></div>
+                            <div id="errors-content" class="tab-panel"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 其他页面内容会继续添加... -->
+    </div>
+
+    <!-- 模态对话框 -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">创建新智能体</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- 模态内容会动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
