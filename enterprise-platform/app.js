@@ -96,36 +96,56 @@ class MultiAgentPlatform {
     async init() {
         try {
             this.setState({ loading: true });
+            console.log('🚀 开始初始化企业级多智能体平台...');
 
-            // 初始化核心组件
+            // 初始化核心组件（同步，必须成功）
+            console.log('📝 初始化核心组件...');
             this.setupNavigation();
             this.setupToolbar();
             this.setupEventListeners();
             this.initializeLocalStorage();
 
-            // 检查用户认证
-            await this.checkAuthentication();
+            // 检查用户认证（可以失败，使用演示模式）
+            console.log('🔐 检查用户认证...');
+            try {
+                await this.checkAuthentication();
+            } catch (error) {
+                console.warn('⚠️ 认证失败，使用演示模式:', error.message);
+            }
 
-            // 初始化连接
-            await this.initializeConnections();
+            // 初始化连接（可以失败，使用演示模式）
+            console.log('🌐 初始化连接...');
+            try {
+                await this.initializeConnections();
+            } catch (error) {
+                console.warn('⚠️ 连接失败，使用演示模式:', error.message);
+                this.enableDemoMode();
+            }
 
-            // 加载数据
+            // 加载数据（同步，使用演示数据）
+            console.log('📊 加载初始数据...');
             await this.loadInitialData();
 
-            // 初始化编辑器
-            await this.initializeMonacoEditor();
+            // 异步初始化编辑器（不阻塞主界面）
+            console.log('💻 异步初始化编辑器...');
+            this.initializeMonacoEditorAsync();
 
             // 启动实时更新
+            console.log('🔄 启动实时更新...');
             this.startRealTimeUpdates();
 
             // 启动任务调度器
+            console.log('⚡ 启动任务调度器...');
             this.taskScheduler.start();
 
-            // 初始化图表
-            this.initializeCharts();
+            // 异步初始化图表（不阻塞主界面）
+            console.log('📈 异步初始化图表...');
+            this.initializeChartsAsync();
 
+            // 主界面加载完成
             this.setState({ loading: false, connected: true });
-            this.showNotification('平台初始化完成', 'success');
+            console.log('✅ 平台核心功能初始化完成');
+            this.showNotification('✅ 平台初始化完成！正在加载高级功能...', 'success');
 
             // 检查是否需要显示新手教程
             this.checkShowTutorial();
@@ -1397,58 +1417,144 @@ on completion {
         this.currentTutorialStep = 0;
         this.tutorialSteps = [
             {
+                target: '.main-content',
+                title: '🎉 欢迎使用企业级多智能体平台！',
+                content: `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">🤖</div>
+                        <h3 style="color: #667eea; margin-bottom: 15px;">欢迎来到多智能体管理平台</h3>
+                        <p style="margin-bottom: 10px;">👋 本平台提供完整的智能体生命周期管理、任务调度和实时监控功能。</p>
+                        <p style="margin-bottom: 10px;">🎯 本教程将用5分钟时间带您了解平台的核心功能。</p>
+                        <p style="color: #667eea; font-weight: bold;">✨ 准备好开始您的智能化之旅了吗？</p>
+                    </div>
+                `,
+                position: 'center',
+                action: () => {
+                    // 确保在仪表板页面
+                    document.querySelector('[data-section="dashboard"]').click();
+                }
+            },
+            {
                 target: '.sidebar',
-                title: '欢迎使用多智能体管理平台！',
-                content: '这是侧边栏导航，您可以在这里访问平台的各个功能模块。让我们开始快速导览吧！',
+                title: '🧭 导航菜单概览',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">平台主要功能模块：</h4>
+                    <ul style="line-height: 1.8; margin-left: 20px; margin-bottom: 15px;">
+                        <li>📊 <strong>仪表板</strong> - 系统概览和关键指标</li>
+                        <li>🤖 <strong>智能体管理</strong> - 创建和管理AI智能体</li>
+                        <li>📋 <strong>任务管理</strong> - 任务分配和执行监控</li>
+                        <li>💻 <strong>DSL编辑器</strong> - 领域特定语言编程</li>
+                        <li>🔧 <strong>API控制台</strong> - 接口测试和调用</li>
+                        <li>🔄 <strong>工作流引擎</strong> - 业务流程自动化</li>
+                        <li>📈 <strong>监控中心</strong> - 实时系统监控</li>
+                        <li>🤝 <strong>协作空间</strong> - 智能体协作通信</li>
+                    </ul>
+                    <p style="color: #28a745; font-weight: bold;">👈 点击左侧菜单项可以切换不同功能模块</p>
+                `,
                 position: 'right',
                 action: () => {}
             },
             {
                 target: '[data-section="dashboard"]',
-                title: '仪表板概览',
-                content: '仪表板提供系统的整体概览，包括智能体状态、任务统计和系统性能指标。',
+                title: '📊 仪表板 - 系统总览',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">仪表板核心功能：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>🔍 <strong>实时监控</strong> - 查看系统整体运行状态</li>
+                        <li>📈 <strong>性能指标</strong> - CPU、内存、网络使用情况</li>
+                        <li>🤖 <strong>智能体状态</strong> - 活跃智能体数量和分布</li>
+                        <li>📋 <strong>任务概览</strong> - 当前任务执行情况</li>
+                        <li>⚡ <strong>系统吞吐量</strong> - 处理能力和响应时间</li>
+                    </ul>
+                    <div style="background: #e8f5e8; padding: 10px; border-radius: 5px; border-left: 4px solid #28a745;">
+                        <strong>💡 提示：</strong> 这里是您日常管理的起点，所有关键信息一目了然！
+                    </div>
+                `,
                 position: 'right',
                 action: () => {
-                    // 确保仪表板是活跃状态
                     document.querySelector('[data-section="dashboard"]').click();
                 }
             },
             {
-                target: '.stats-grid',
-                title: '关键指标',
-                content: '这里显示了系统的关键性能指标：活跃智能体数量、运行中的任务、系统吞吐量和资源使用率。',
-                position: 'bottom',
-                action: () => {}
-            },
-            {
                 target: '[data-section="agents"]',
-                title: '智能体管理',
-                content: '在这里您可以查看、创建、配置和管理所有智能体。每个智能体都有特定的能力和用途。',
+                title: '🤖 智能体管理 - 核心功能',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">支持的智能体类型：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>📊 <strong>数据处理器</strong> - ETL、数据清洗和验证</li>
+                        <li>⚡ <strong>任务调度器</strong> - 负载均衡和智能调度</li>
+                        <li>🧠 <strong>知识工作者</strong> - 文档处理和语义搜索</li>
+                        <li>🎯 <strong>协调器</strong> - 工作流编排和决策协调</li>
+                        <li>🤖 <strong>ML模型</strong> - 机器学习训练和推理</li>
+                        <li>🔗 <strong>API代理</strong> - 外部系统集成和数据同步</li>
+                    </ul>
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                        <strong>🚀 快速开始：</strong> 点击"创建智能体"按钮开始您的第一个AI助手！
+                    </div>
+                `,
                 position: 'right',
                 action: () => {
                     document.querySelector('[data-section="agents"]').click();
                 }
             },
             {
-                target: '#create-agent-btn',
-                title: '创建智能体',
-                content: '点击这个按钮可以创建新的智能体。您可以选择不同类型的智能体来处理特定任务。',
-                position: 'bottom',
-                action: () => {}
-            },
-            {
                 target: '[data-section="tasks"]',
-                title: '任务调度',
-                content: '任务调度模块让您可以创建、分配和监控任务的执行。支持优先级管理和负载均衡。',
+                title: '📋 任务管理 - 智能调度',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">任务管理特色功能：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>🎯 <strong>智能分配</strong> - 根据智能体能力自动分配任务</li>
+                        <li>📊 <strong>优先级管理</strong> - 支持多级任务优先级调度</li>
+                        <li>🔄 <strong>故障恢复</strong> - 自动重试和智能错误处理</li>
+                        <li>📈 <strong>性能优化</strong> - 负载均衡和资源高效利用</li>
+                        <li>🔍 <strong>实时监控</strong> - 任务执行状态实时跟踪</li>
+                    </ul>
+                    <div style="background: #d4edda; padding: 10px; border-radius: 5px; border-left: 4px solid #28a745;">
+                        <strong>🌟 平台优势：</strong> 高效的任务调度是多智能体协作的核心！
+                    </div>
+                `,
                 position: 'right',
                 action: () => {
                     document.querySelector('[data-section="tasks"]').click();
                 }
             },
             {
+                target: '[data-section="dsl-editor"]',
+                title: '💻 DSL编辑器 - 强大编程工具',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">DSL编辑器核心优势：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>🎨 <strong>语法高亮</strong> - Monaco编辑器专业支持</li>
+                        <li>🔍 <strong>智能提示</strong> - 自动补全和实时错误检查</li>
+                        <li>🔄 <strong>实时执行</strong> - 即时运行和结果预览</li>
+                        <li>📖 <strong>丰富示例</strong> - 内置多种应用场景模板</li>
+                        <li>🚀 <strong>热重载</strong> - 代码修改即时生效</li>
+                    </ul>
+                    <div style="background: #e2e3f1; padding: 10px; border-radius: 5px; border-left: 4px solid #6f42c1;">
+                        <strong>✨ 核心价值：</strong> 用简洁的DSL语法实现复杂的智能体协作逻辑！
+                    </div>
+                `,
+                position: 'right',
+                action: () => {
+                    document.querySelector('[data-section="dsl-editor"]').click();
+                }
+            },
+            {
                 target: '[data-section="workflow"]',
-                title: '工作流设计',
-                content: '工作流设计器允许您创建复杂的多步骤流程，实现智能体之间的协作和任务编排。',
+                title: '🔄 工作流引擎 - 流程自动化',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">工作流核心功能：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>🎯 <strong>可视化设计</strong> - 拖拽式流程设计器</li>
+                        <li>🔀 <strong>条件分支</strong> - 智能决策和动态路由</li>
+                        <li>⚡ <strong>并行执行</strong> - 多任务并发处理能力</li>
+                        <li>📊 <strong>执行监控</strong> - 实时流程状态跟踪</li>
+                        <li>🛠️ <strong>错误处理</strong> - 完善的异常处理机制</li>
+                    </ul>
+                    <div style="background: #fff0e6; padding: 10px; border-radius: 5px; border-left: 4px solid #fd7e14;">
+                        <strong>🎯 应用场景：</strong> 让复杂的业务流程完全自动化运行！
+                    </div>
+                `,
                 position: 'right',
                 action: () => {
                     document.querySelector('[data-section="workflow"]').click();
@@ -1456,28 +1562,86 @@ on completion {
             },
             {
                 target: '[data-section="monitoring"]',
-                title: '实时监控',
-                content: '监控面板提供系统性能、智能体状态和实时活动的全面监控，帮助您掌握系统运行状况。',
+                title: '📈 监控中心 - 实时洞察',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">监控系统特色：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>📊 <strong>实时图表</strong> - 系统性能数据可视化</li>
+                        <li>🚨 <strong>智能告警</strong> - 异常情况及时通知</li>
+                        <li>📈 <strong>趋势分析</strong> - 历史数据模式识别</li>
+                        <li>🔍 <strong>详细日志</strong> - 完整的操作审计追踪</li>
+                        <li>🎯 <strong>性能优化</strong> - 基于数据的优化建议</li>
+                    </ul>
+                    <div style="background: #f8d7da; padding: 10px; border-radius: 5px; border-left: 4px solid #dc3545;">
+                        <strong>👀 管控能力：</strong> 全方位掌控系统运行状况，预防问题发生！
+                    </div>
+                `,
                 position: 'right',
                 action: () => {
                     document.querySelector('[data-section="monitoring"]').click();
                 }
             },
             {
-                target: '[data-section="dsl-editor"]',
-                title: 'DSL编辑器',
-                content: 'DSL编辑器是平台的核心功能，您可以在这里编写和测试多智能体协作的DSL程序。',
+                target: '[data-section="collaboration"]',
+                title: '🤝 协作空间 - 智能体通信',
+                content: `
+                    <h4 style="color: #667eea; margin-bottom: 15px;">协作系统特色：</h4>
+                    <ul style="line-height: 1.6; margin-bottom: 15px;">
+                        <li>💬 <strong>实时通信</strong> - 智能体间高效消息传递</li>
+                        <li>🎭 <strong>角色管理</strong> - 智能体角色和权限控制</li>
+                        <li>🔄 <strong>事件驱动</strong> - 基于事件的智能协作机制</li>
+                        <li>🎯 <strong>冲突解决</strong> - 智能冲突检测和自动解决</li>
+                        <li>📡 <strong>黑板模式</strong> - 共享信息空间协作</li>
+                    </ul>
+                    <div style="background: #d1f2eb; padding: 10px; border-radius: 5px; border-left: 4px solid #20c997;">
+                        <strong>🌟 协作价值：</strong> 让AI智能体真正实现团队协同工作！
+                    </div>
+                `,
                 position: 'right',
                 action: () => {
-                    document.querySelector('[data-section="dsl-editor"]').click();
+                    document.querySelector('[data-section="collaboration"]').click();
                 }
             },
             {
-                target: '.toolbar',
-                title: '工具栏功能',
-                content: '顶部工具栏包含通知、用户设置和系统操作。右上角的问号图标可以随时重新打开本教程。',
-                position: 'bottom',
-                action: () => {}
+                target: '.main-content',
+                title: '🎉 教程完成 - 开始精彩体验',
+                content: `
+                    <div style="text-align: center; padding: 30px;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">🎊</div>
+                        <h3 style="color: #28a745; margin-bottom: 20px;">恭喜！您已完成新手教程</h3>
+                        <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <h4 style="color: #667eea; margin-top: 0; margin-bottom: 15px;">💡 接下来您可以：</h4>
+                            <ul style="text-align: left; line-height: 2; margin-bottom: 20px;">
+                                <li>🤖 <strong>创建第一个智能体</strong> - 在智能体管理中开始</li>
+                                <li>📋 <strong>创建测试任务</strong> - 体验智能任务分配功能</li>
+                                <li>💻 <strong>编写DSL程序</strong> - 尝试智能体协作脚本</li>
+                                <li>🔄 <strong>设计工作流</strong> - 构建自动化业务流程</li>
+                                <li>📊 <strong>查看监控数据</strong> - 了解系统运行状态</li>
+                                <li>🤝 <strong>配置协作规则</strong> - 设置智能体协作机制</li>
+                            </ul>
+                            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                                <strong>🚀 快速开始建议：</strong><br>
+                                1. 先创建一个"数据处理器"智能体<br>
+                                2. 然后创建一个简单的数据处理任务<br>
+                                3. 观察任务执行过程和结果
+                            </div>
+                        </div>
+                        <p style="color: #666; margin-top: 20px; font-size: 14px;">
+                            <strong>💬 需要帮助？</strong> 点击右上角的 🎓 教程按钮可以随时重新开始教程
+                        </p>
+                    </div>
+                `,
+                position: 'center',
+                action: () => {
+                    // 返回仪表板
+                    document.querySelector('[data-section="dashboard"]').click();
+                    // 标记教程完成
+                    localStorage.setItem('enterprise_tutorial_completed', new Date().toISOString());
+                    // 显示完成通知
+                    setTimeout(() => {
+                        this.showNotification('🎉 新手教程完成！您现在可以开始使用平台的所有功能了', 'success');
+                    }, 1000);
+                }
             }
         ];
 
